@@ -3,18 +3,25 @@ import argparse
 import pickle
 import io
 import os
+from collections import namedtuple
+from copy import deepcopy
+
 import numpy as np
 
 from future.builtins import open, str
 
 import network2
+from get_circle import pixels_from_circle
 
 
-def get_formatted_input(input_data, classifier):
+def get_formatted_input(input_data, classifier=None, convert_scale=False, multi_class=False, use_inner_array=False):
     """
     Transforms the data into numpy format
     :param input_data: file path or iterable
+    :param convert_scale:
     :param classifier: 0 or 1 classifier for the set
+    :param multi_class:
+    :param use_inner_array:
     :return:
     """
     if isinstance(input_data, str):
@@ -23,19 +30,41 @@ def get_formatted_input(input_data, classifier):
     else:
         circle_data = input_data
     inner_arrays = []
+    if classifier is not None:
+        if multi_class:
+            if classifier == 1:
+                classifier = [0, 1]
+            else:
+                classifier = [1, 0]
+        else:
+            classifier = [classifier]
+        if use_inner_array:
+            classifier = [np.array([item]) for item in classifier]
     for l_circle in circle_data:
-        label_data = []
-        inner_array = [np.array([circle], np.float32) for circle in l_circle]
-        label_data.append(np.array([classifier, ], np.float32))
-        inner_arrays.append(tuple([np.array(inner_array, np.float32), np.array(label_data, np.float32)]))
+        if not convert_scale:
+            inner_array = [np.array([circle], np.float32)
+                           if use_inner_array
+                           else circle
+                           for circle in l_circle]
+        else:
+            inner_array = [np.array([1.0 - (circle/255)], np.float32)
+                           if use_inner_array
+                           else 1.0 - (circle/255)
+                           for circle in l_circle]
+        if classifier is not None:
+            inner_arrays.append(tuple([np.array(inner_array, np.float32), np.array(classifier)]))
+        else:
+            inner_arrays.append(np.array(inner_array, np.float32))
     return inner_arrays
 
 
-def get_formatted_input_not_training(input_data, classifier):
+def get_formatted_input_not_training(input_data, classifier, convert_scale=False, use_inner_array=False):
     """
     Transforms the data into numpy format
     :param input_data: file path or iterable
     :param classifier: 0 or 1 classifier for the set
+    :param convert_scale:
+    :param use_inner_array:
     :return:
     """
     if isinstance(input_data, str):
@@ -46,10 +75,33 @@ def get_formatted_input_not_training(input_data, classifier):
     inner_arrays = []
     for l_circle in circle_data:
         label_data = []
-        inner_array = [np.array([circle], np.float32) for circle in l_circle]
+        if not convert_scale:
+            inner_array = [np.array([circle], np.float32)
+                           if use_inner_array
+                           else circle
+                           for circle in l_circle]
+        else:
+            inner_array = [np.array([1.0 - (circle/255)], np.float32) if use_inner_array
+                           else 1.0 - (circle/255)
+                           for circle in l_circle]
         label_data.append(np.array([classifier, ], np.float32))
         inner_arrays.append(tuple([np.array(inner_array, np.float32), classifier]))
     return inner_arrays
+
+
+ParseCropResult = namedtuple(u'ParseCropResult', [u'idx', u'cr', u'cr_scaled', u'dc_formatted_cr', u'result'])
+
+
+def parse_crops(crops, sDA):
+    for idx, cr in enumerate(crops):
+        cr = cr.convert('L')
+        y = np.asarray(cr.getdata(), dtype=np.float64)
+        y = np.asarray(y, dtype=np.uint8)
+        y = np.array([1 - i/255 for i in y])
+        y = np.array([y])
+        dc_formatted_cr = deepcopy(y)
+        result = sDA.predict(dc_formatted_cr)
+        yield ParseCropResult(idx, cr, y, dc_formatted_cr, result)
 
 
 if __name__ == '__main__':
@@ -62,7 +114,7 @@ if __name__ == '__main__':
     a_p.add_argument('hidden_nodes', type=int)
     a_p.add_argument('--monitor_training', default=False, type=bool)
     args = a_p.parse_args()
-    formatted_input = get_formatted_input(args.pickle_file_name, args.classifier)
+    formatted_input = get_formatted_input(args.pickle_file_name, args.classifier, use_inner_array=True)
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
     net = network2.Network([args.size, args.hidden_nodes, 1])
     net.SGD(formatted_input, args.epochs, 10, 3.0,

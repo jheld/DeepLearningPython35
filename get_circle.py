@@ -17,7 +17,10 @@ def pixels_from_circle(circle_data, regular_array=True):
     :param regular_array:
     :return:
     """
-    x = Image.open(circle_data, 'r')
+    if isinstance(circle_data, str):
+        x = Image.open(circle_data, 'r')
+    else:
+        x = circle_data
     x = x.convert('L')
     y = np.asarray(x.getdata(), dtype=np.float64).reshape((x.size[1] * x.size[0], -1))
     y = np.asarray(y, dtype=np.uint8)
@@ -25,6 +28,18 @@ def pixels_from_circle(circle_data, regular_array=True):
         return [item[0] for item in y]
     else:
         return y
+
+
+def crop(file_path, height, width):
+    im = Image.open(file_path)
+    imgwidth, imgheight = im.size
+    # slide a window across the image
+    for y in range(0, imgheight, 1):
+        for x in range(0, imgwidth, 1):
+            # yield the current window
+            if y + height < imgheight and x + width < imgwidth:
+                print(x, x + width, y, y + height)
+                yield im.crop((x, y, x + width, y + height))
 
 
 def save_image_as_jpg(circle_data, output_file_name):
@@ -52,7 +67,10 @@ def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_s
     rand_range = tuple(map(int, rand_range))
     if isinstance(circle_data, str):
         with open(circle_data, 'rb') as circle_file:
-            circle_data = pickle.loads(circle_file.read())
+            try:
+                circle_data = pickle.loads(circle_file.read())
+            except Exception:
+                circle_data = np.asarray(Image.open(circle_data).convert(u'L').getdata(), dtype=np.float64)
     for _ in range(num_samples):
         # sample = []
         # for item in circle_data:
