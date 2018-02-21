@@ -11,7 +11,26 @@ import numpy as np
 from future.builtins import open, str
 
 import network2
-from get_circle import pixels_from_circle
+from get_circle import pixels_from_circle, training_evaluation_test_split, crop, generate_threshold_adjustments
+
+
+def get_default_input():
+    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_2_under_40.pkl')
+    tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_2_under_40.pkl')
+    tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/lorem_ipsum_generated.pkl')
+    tr_bad += tr_ipsum
+    ev_bad += ev_ipsum
+    te_bad += te_ipsum
+    training = []
+    training.extend(get_formatted_input(tr_good, 1, multi_class=True, use_inner_array=True, convert_scale=True))
+    training.extend(get_formatted_input(tr_bad, 0, multi_class=True, use_inner_array=True, convert_scale=True))
+    evaluation = []
+    evaluation.extend(get_formatted_input_not_training(ev_good, 1, use_inner_array=True, convert_scale=True))
+    evaluation.extend(get_formatted_input_not_training(ev_bad, 0, use_inner_array=True, convert_scale=True))
+    testing = []
+    testing.extend(get_formatted_input_not_training(te_good, 1, use_inner_array=True, convert_scale=True))
+    testing.extend(get_formatted_input_not_training(te_bad, 0, use_inner_array=True, convert_scale=True))
+    return training, evaluation, testing
 
 
 def get_formatted_input(input_data, classifier=None, convert_scale=False, multi_class=False, use_inner_array=False):
@@ -112,12 +131,21 @@ if __name__ == '__main__':
     a_p.add_argument('size', type=int)
     a_p.add_argument('epochs', type=int)
     a_p.add_argument('hidden_nodes', type=int)
+    a_p.add_argument(u'--default_input', default=False)
     a_p.add_argument('--monitor_training', default=False, type=bool)
     args = a_p.parse_args()
-    formatted_input = get_formatted_input(args.pickle_file_name, args.classifier, use_inner_array=True)
+    if not args.default_input:
+        formatted_input = get_formatted_input(args.pickle_file_name, args.classifier, use_inner_array=True)
+        formatted_ev = None
+    else:
+        formatted_input, formatted_ev, _ = get_default_input()
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
-    net = network2.Network([args.size, args.hidden_nodes, 1])
-    net.SGD(formatted_input, args.epochs, 10, 3.0,
+    net = network2.Network([args.size, args.hidden_nodes, 2])
+    net.SGD(formatted_input, args.epochs, 10, 0.001,
+            evaluation_data=formatted_ev,
             monitor_training_accuracy=args.monitor_training,
-            monitor_training_cost=args.monitor_training)
+            monitor_training_cost=args.monitor_training,
+            monitor_evaluation_accuracy=bool(formatted_ev),
+            monitor_evaluation_cost=bool(formatted_ev),
+    )
     net.save(args.network_output_file)
