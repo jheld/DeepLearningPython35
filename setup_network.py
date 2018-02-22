@@ -128,9 +128,10 @@ if __name__ == '__main__':
     a_p.add_argument('pickle_file_name', type=str)
     a_p.add_argument('network_output_file', type=str)
     a_p.add_argument('classifier', type=int)
-    a_p.add_argument('size', type=int)
     a_p.add_argument('epochs', type=int)
     a_p.add_argument('hidden_nodes', type=int)
+    a_p.add_argument(u'--lmbda', default=0.0)
+    a_p.add_argument(u'--eta', default=3)
     a_p.add_argument(u'--default_input', default=False)
     a_p.add_argument('--monitor_training', default=False, type=bool)
     args = a_p.parse_args()
@@ -140,8 +141,11 @@ if __name__ == '__main__':
     else:
         formatted_input, formatted_ev, _ = get_default_input()
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
-    net = network2.Network([args.size, args.hidden_nodes, 2])
-    net.SGD(formatted_input, args.epochs, 10, 0.001,
+    net = network2.Network([900, args.hidden_nodes, 2])
+    eta = float(args.eta)
+    lmbda = float(args.lmbda)
+    print(u'eta: {eta}, lmbda: {lmbda}'.format(eta=eta, lmbda=lmbda))
+    net.SGD(formatted_input, args.epochs, 10, eta=eta, lmbda=lmbda,
             evaluation_data=formatted_ev,
             monitor_training_accuracy=args.monitor_training,
             monitor_training_cost=args.monitor_training,
