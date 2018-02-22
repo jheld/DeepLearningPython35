@@ -126,11 +126,11 @@ def parse_crops(crops, sDA):
 
 if __name__ == '__main__':
     a_p = argparse.ArgumentParser()
-    a_p.add_argument('pickle_file_name', type=str)
     a_p.add_argument('network_output_file', type=str)
-    a_p.add_argument('classifier', type=int)
     a_p.add_argument('epochs', type=int)
     a_p.add_argument('hidden_nodes', type=int)
+    a_p.add_argument('--good_input_file_name', type=str)
+    a_p.add_argument('--bad_input_file_name', type=str)
     a_p.add_argument(u'--lmbda', default=0.0)
     a_p.add_argument(u'--eta', default=3)
     a_p.add_argument(u'--default_input', default=False)
@@ -138,7 +138,11 @@ if __name__ == '__main__':
     a_p.add_argument('--shuffle_input', default=False, type=bool)
     args = a_p.parse_args()
     if not args.default_input:
-        formatted_input = get_formatted_input(args.pickle_file_name, args.classifier, use_inner_array=True)
+        # note, there is no eval and test input support here, yet.
+        good_input_file = args.good_input_file_name
+        bad_input_file = args.bad_input_file_name
+        formatted_input = get_formatted_input(good_input_file, 1, convert_scale=True, use_inner_array=True)
+        formatted_input.extend(get_formatted_input(bad_input_file, 0, convert_scale=True, use_inner_array=True))
         formatted_ev = None
     else:
         formatted_input, formatted_ev, _ = get_default_input()
