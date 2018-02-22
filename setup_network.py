@@ -143,6 +143,7 @@ if __name__ == '__main__':
     else:
         formatted_input, formatted_ev, _ = get_default_input()
         if args.shuffle_input:
+            print(u'Going to shuffle now.')
             random.shuffle(formatted_input)
             random.shuffle(formatted_ev)
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
