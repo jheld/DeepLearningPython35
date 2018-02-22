@@ -3,6 +3,7 @@ import argparse
 import pickle
 import io
 import os
+import random
 from collections import namedtuple
 from copy import deepcopy
 
@@ -134,12 +135,16 @@ if __name__ == '__main__':
     a_p.add_argument(u'--eta', default=3)
     a_p.add_argument(u'--default_input', default=False)
     a_p.add_argument('--monitor_training', default=False, type=bool)
+    a_p.add_argument('--shuffle_input', default=False, type=bool)
     args = a_p.parse_args()
     if not args.default_input:
         formatted_input = get_formatted_input(args.pickle_file_name, args.classifier, use_inner_array=True)
         formatted_ev = None
     else:
         formatted_input, formatted_ev, _ = get_default_input()
+        if args.shuffle_input:
+            random.shuffle(formatted_input)
+            random.shuffle(formatted_ev)
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
     net = network2.Network([900, args.hidden_nodes, 2])
     eta = float(args.eta)
