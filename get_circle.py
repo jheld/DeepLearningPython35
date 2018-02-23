@@ -146,12 +146,15 @@ if __name__ == '__main__':
     a_p.add_argument(u'--default_good', default=False)
     a_p.add_argument(u'--default_bad', default=False)
     a_p.add_argument(u'--default_ipsum', default=False)
+    a_p.add_argument(u'--shuffle_samples', default=False)
     args = a_p.parse_args()
     if args.default_good:
         adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 2, 40, 5, rand_range=[255, 256], dark_cut_off=200)
         adjustments = [list(a)
                        for adj in adjustments
                        for a in adj]
+        if args.shuffle_samples:
+            random.shuffle(adjustments)
         with open(u'sample_data/eval_2_under_40.pkl', 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
     if args.default_bad:
@@ -159,6 +162,8 @@ if __name__ == '__main__':
         adjustments = [list(a)
                        for adj in adjustments
                        for a in adj]
+        if args.shuffle_samples:
+            random.shuffle(adjustments)
         with open(u'sample_data/eval_90_under_100.pkl', 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
     if args.default_ipsum:
@@ -167,6 +172,8 @@ if __name__ == '__main__':
         for _ in range(3000):
             c = next(crops)
             ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
+        if args.shuffle_samples:
+            random.shuffle(ipsums)
         with open(u'sample_data/lorem_upsem_generated.pkl', 'wb') as circle_output:
             pickle.dump(ipsums, circle_output)
     if not args.default_good and not args.default_bad and not args.default_ipsum:
