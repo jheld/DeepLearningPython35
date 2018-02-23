@@ -149,7 +149,7 @@ if __name__ == '__main__':
     a_p.add_argument(u'--shuffle_samples', default=False)
     args = a_p.parse_args()
     if args.default_good:
-        adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 2, 40, 5, rand_range=[255, 256], dark_cut_off=200)
+        adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 30, 3, rand_range=[255, 256], dark_cut_off=200)
         adjustments = [list(a)
                        for adj in adjustments
                        for a in adj]
