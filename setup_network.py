@@ -16,8 +16,8 @@ from get_circle import pixels_from_circle, training_evaluation_test_split, crop,
 
 
 def get_default_input():
-    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_2_under_40.pkl')
-    tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_2_under_40.pkl')
+    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_1_under_30.pkl')
+    tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_90_under_100.pkl')
     tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/lorem_ipsum_generated.pkl')
     tr_bad += tr_ipsum
     ev_bad += ev_ipsum
@@ -136,6 +136,7 @@ if __name__ == '__main__':
     a_p.add_argument(u'--default_input', default=False)
     a_p.add_argument('--monitor_training', default=False, type=bool)
     a_p.add_argument('--shuffle_input', default=False, type=bool)
+    a_p.add_argument('--early_stopping_n', default=0, type=int)
     args = a_p.parse_args()
     if not args.default_input:
         # note, there is no eval and test input support here, yet.
@@ -157,6 +158,7 @@ if __name__ == '__main__':
     print(u'eta: {eta}, lmbda: {lmbda}'.format(eta=eta, lmbda=lmbda))
     net.SGD(formatted_input, args.epochs, 10, eta=eta, lmbda=lmbda,
             evaluation_data=formatted_ev,
+            early_stopping_n=args.early_stopping_n or 0,
             monitor_training_accuracy=args.monitor_training,
             monitor_training_cost=args.monitor_training,
             monitor_evaluation_accuracy=bool(formatted_ev),

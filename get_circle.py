@@ -155,7 +155,7 @@ if __name__ == '__main__':
                        for a in adj]
         if args.shuffle_samples:
             random.shuffle(adjustments)
-        with open(u'sample_data/eval_2_under_40.pkl', 'wb') as circle_output:
+        with open(u'sample_data/eval_1_under_30.pkl', 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
     if args.default_bad:
         adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 90, 100, 3, rand_range=[255, 256], dark_cut_off=200)
