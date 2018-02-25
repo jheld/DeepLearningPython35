@@ -193,8 +193,12 @@ if __name__ == '__main__':
     te_accurate_count = 0
     for item in formatted_te:
         te_result = net.feedforward(item[0])
-        if te_result[1][0] < 0.5:
-            te_accurate_count += 1
+        if item[1] == 0:
+            if te_result[1][0] < 0.5:
+                te_accurate_count += 1
+        else:
+            if te_result[1][0] > 0.5:
+                te_accurate_count += 1
     if formatted_te:
         print(u'Test accuracy: {}, {} / {}'.format(te_accurate_count / len(formatted_te), te_accurate_count, len(formatted_te)))
     save_state = input(u'Save the network state?')
