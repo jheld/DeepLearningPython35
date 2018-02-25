@@ -30,7 +30,7 @@ def pixels_from_circle(circle_data, regular_array=True):
         return y
 
 
-def crop(file_path, height, width):
+def crop(file_path, height, width, printing=True):
     im = Image.open(file_path)
     imgwidth, imgheight = im.size
     # slide a window across the image
@@ -38,7 +38,8 @@ def crop(file_path, height, width):
         for x in range(0, imgwidth, 1):
             # yield the current window
             if y + height < imgheight and x + width < imgwidth:
-                print(x, x + width, y, y + height)
+                if printing:
+                    print(x, x + width, y, y + height)
                 yield im.crop((x, y, x + width, y + height))
 
 
@@ -135,6 +136,14 @@ def generate_threshold_adjustments(circle_data, threshold_start, threshold_end, 
         yield adjust_from_circle(circle_data, random_threshold=threshold / 100, **kwargs)
 
 
+def bubble_permutation():
+    im = Image.open(u'images/thesis_circles.jpg')
+    im = im.convert(u'L')
+    for i in range(130, 141, 1):
+        for j in range(113, 126, 1):
+            yield np.asarray(im.crop((i, j, i+30, j+30))).reshape(900)
+
+
 if __name__ == '__main__':
     a_p = argparse.ArgumentParser()
     a_p.add_argument(u'circle_file_path', type=str)
@@ -143,33 +152,67 @@ if __name__ == '__main__':
     a_p.add_argument(u'--rand_range', nargs=2, required=False)
     a_p.add_argument(u'--num_samples', type=int, default=1000, required=False)
     a_p.add_argument(u'--dark_cut_off', type=int,  default=30, required=False)
-    a_p.add_argument(u'--default_good', default=False)
-    a_p.add_argument(u'--default_bad', default=False)
-    a_p.add_argument(u'--default_ipsum', default=False)
-    a_p.add_argument(u'--shuffle_samples', default=False)
+    a_p.add_argument(u'--default_good', default=0)
+    a_p.add_argument(u'--default_bad', default=0)
+    a_p.add_argument(u'--default_ipsum', default=0)
+    a_p.add_argument(u'--shuffle_samples', default=0)
+    a_p.add_argument(u'--default_good_permutations', default=0)
     args = a_p.parse_args()
+    default_good_permutations = int(args.default_good_permutations) if isinstance(args.default_good_permutations, str) else args.default_good_permutations
     if args.default_good:
-        adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 30, 3, rand_range=[255, 256], dark_cut_off=200)
-        adjustments = [list(a)
-                       for adj in adjustments
-                       for a in adj]
+        if default_good_permutations:
+            print(u'using default good permutations')
+            all_adjustments = []
+            for idx, bubble in enumerate(bubble_permutation()):
+                adjustments = generate_threshold_adjustments(bubble, 1, 10, 2, rand_range=[255, 256],
+                                                             dark_cut_off=200, num_samples=20)
+                print(idx)
+                adjustments = [list(a)
+                               for adj in adjustments
+                               for a in adj]
+                all_adjustments.extend(adjustments)
+            adjustments = all_adjustments
+        else:
+            adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 15, 1, rand_range=[255, 256], dark_cut_off=200)
+            adjustments = [list(a)
+                           for adj in adjustments
+                           for a in adj]
+            adjustments.append(np.array(Image.open(u'images/eval_circle.jpg').convert(u'L')).reshape(900))
+        im = Image.open(u'images/thesis_circles.jpg')
+        im = im.convert(u'L')
+        for i in range(130, 141, 1):
+            for j in range(113, 126, 1):
+                adjustments.append(np.asarray(im.crop((i, j, i+30, j+30))).reshape(900))
+        im.crop((135, 120, 165, 150))
         if args.shuffle_samples:
             random.shuffle(adjustments)
-        with open(u'sample_data/eval_1_under_30.pkl', 'wb') as circle_output:
+        print(u'will write out')
+        if not args.default_good_permutations:
+            prefix_good = u'standard_'
+        else:
+            prefix_good = u''
+        with open(u'sample_data/{}eval_1_under_30.pkl'.format(prefix_good), 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
+        print(u'finished writing')
+        del adjustments
     if args.default_bad:
         adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 90, 100, 3, rand_range=[255, 256], dark_cut_off=200)
         adjustments = [list(a)
                        for adj in adjustments
                        for a in adj]
+        adjustments.append(np.array([255 for _ in range(900)]))
         if args.shuffle_samples:
             random.shuffle(adjustments)
         with open(u'sample_data/eval_90_under_100.pkl', 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
     if args.default_ipsum:
-        crops = crop(u'sample_data/thesis_lorem_ipsum.jpg', 30, 30)
+        crops = crop(u'sample_data/thesis_lorem_ipsum.jpg', 30, 30, printing=False)
         ipsums = []
-        for _ in range(3000):
+        for _ in range(6000):
+            c = next(crops)
+            ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
+        crops = crop(u'sample_data/thesis_lorem_ipsum_9.jpg', 30, 30, printing=False)
+        for _ in range(6000):
             c = next(crops)
             ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
         if args.shuffle_samples:

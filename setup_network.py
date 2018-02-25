@@ -15,8 +15,8 @@ import network2
 from get_circle import pixels_from_circle, training_evaluation_test_split, crop, generate_threshold_adjustments
 
 
-def get_default_input():
-    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_1_under_30.pkl')
+def get_default_input(good_permutations=True):
+    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/{}eval_1_under_30.pkl'.format(u'' if good_permutations else u'standard_'))
     tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_90_under_100.pkl')
     tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/lorem_ipsum_generated.pkl')
     tr_bad += tr_ipsum
@@ -124,6 +124,29 @@ def parse_crops(crops, sDA):
         yield ParseCropResult(idx, cr, y, dc_formatted_cr, result)
 
 
+def net_parse_crops(crops, net):
+    for idx, cr in enumerate(crops):
+        cr = cr.convert('L')
+        y = np.asarray(cr.getdata(), dtype=np.float64).reshape(cr.size)
+        y = np.asarray(y, dtype=np.uint8)
+        y = np.array([1 - i/255 for i in y])
+        y = y.reshape(y.size, -1)
+        y = np.array([y])
+        # dc_formatted_cr = deepcopy(y)
+        dc_formatted_cr = y
+        result = net.feedforward(dc_formatted_cr[0])
+        yield ParseCropResult(idx, cr, y, dc_formatted_cr, result)
+
+
+def net_crops_that_are_good(source_file_path, net):
+    crops = crop(source_file_path, 30, 30)
+    pcs = net_parse_crops(crops, net)
+    for pc in pcs:
+        print(pc.result, pc.result[1][0])
+        if pc.result[1][0] > 0.7:
+            yield pc
+
+
 if __name__ == '__main__':
     a_p = argparse.ArgumentParser()
     a_p.add_argument('network_output_file', type=str)
@@ -133,11 +156,14 @@ if __name__ == '__main__':
     a_p.add_argument('--bad_input_file_name', type=str)
     a_p.add_argument(u'--lmbda', default=0.0)
     a_p.add_argument(u'--eta', default=3)
-    a_p.add_argument(u'--default_input', default=False)
+    a_p.add_argument(u'--default_input', default=0)
     a_p.add_argument('--monitor_training', default=False, type=bool)
-    a_p.add_argument('--shuffle_input', default=False, type=bool)
+    a_p.add_argument('--shuffle_input', default=0, type=bool)
     a_p.add_argument('--early_stopping_n', default=0, type=int)
+    a_p.add_argument(u'--default_good_permutations', default=False)
     args = a_p.parse_args()
+    formatted_te = []
+    default_good_permutations = int(args.default_good_permutations) if isinstance(args.default_good_permutations, str) else args.default_good_permutations
     if not args.default_input:
         # note, there is no eval and test input support here, yet.
         good_input_file = args.good_input_file_name
@@ -146,7 +172,7 @@ if __name__ == '__main__':
         formatted_input.extend(get_formatted_input(bad_input_file, 0, convert_scale=True, use_inner_array=True))
         formatted_ev = None
     else:
-        formatted_input, formatted_ev, _ = get_default_input()
+        formatted_input, formatted_ev, formatted_te = get_default_input(good_permutations=default_good_permutations)
         if args.shuffle_input:
             print(u'Going to shuffle now.')
             random.shuffle(formatted_input)
@@ -164,4 +190,11 @@ if __name__ == '__main__':
             monitor_evaluation_accuracy=bool(formatted_ev),
             monitor_evaluation_cost=bool(formatted_ev),
     )
+    te_accurate_count = 0
+    for item in formatted_te:
+        te_result = net.feedforward(item[0])
+        if te_result[1][0] < 0.5:
+            te_accurate_count += 1
+    if formatted_te:
+        print(u'Test accuracy: {}, {} / {}'.format(te_accurate_count / len(formatted_te), te_accurate_count, len(formatted_te)))
     net.save(args.network_output_file)

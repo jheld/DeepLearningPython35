@@ -52,7 +52,7 @@ from dA import dA
 # start-snippet-1
 from setup_network import get_formatted_input, get_formatted_input_not_training
 
-
+import pickle
 class SdA(object):
     """Stacked denoising auto-encoder class (SdA)
 
@@ -494,6 +494,27 @@ def test_SdA(finetune_lr=0.1, pretraining_epochs=15,
            os.path.split(__file__)[1] +
            ' ran for %.2fm' % ((end_time - start_time) / 60.)), file=sys.stderr)
 
+import numpy as np
+def bubble_sda_data_prep():
+    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15),
+                                                               u'sample_data/eval_1_under_30.pkl')
+    # tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_90_under_100.pkl')
+    # tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15),
+    #                                                               u'sample_data/lorem_ipsum_generated.pkl')
+    # tr_bad += tr_ipsum
+    # ev_bad += ev_ipsum
+    # te_bad += te_ipsum
+    training = np.array([[1 - i/255 for i in item] for item in tr_good])
+    # training.extend(get_formatted_input(tr_bad, convert_scale=True))
+    training = training, np.array([1 for _ in range(len(tr_good))])
+    evaluation = np.array([[1 - i/255 for i in item] for item in ev_good])
+    # evaluation.extend(get_formatted_input(ev_bad, convert_scale=True))
+    evaluation = evaluation, np.array([1 for _ in range(len(ev_good))])
+    testing = np.array([[1 - i/255 for i in item] for item in te_good])
+    # testing.extend(get_formatted_input(te_bad, convert_scale=True))
+    testing = testing, np.array([1 for _ in range(len(te_good))])
+    return training, evaluation, testing
+
 
 def test_bubble_SdA(finetune_lr=0.1, pretraining_epochs=15,
                     pretrain_lr=0.001, training_epochs=1000,
@@ -520,8 +541,15 @@ def test_bubble_SdA(finetune_lr=0.1, pretraining_epochs=15,
     :param dataset: path the the pickled dataset
 
     """
-
-    datasets = load_data(dataset)
+    datasets = bubble_sda_data_prep()
+    with open(u'theano_sda.pkl', 'wb') as t_f:
+        pickle.dump(datasets, t_f)
+    import gzip
+    import shutil
+    with open('theano_sda.pkl', 'rb') as f_in:
+        with gzip.open('theano_sda.pkl.gz', 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    datasets = load_data('theano_sda.pkl.gz')
 
     train_set_x, train_set_y = datasets[0]
     valid_set_x, valid_set_y = datasets[1]
@@ -540,7 +568,7 @@ def test_bubble_SdA(finetune_lr=0.1, pretraining_epochs=15,
         numpy_rng=numpy_rng,
         n_ins=30 * 30,
         hidden_layers_sizes=[1000, 1000, 1000],
-        n_outs=2
+        n_outs=1
     )
     # end-snippet-3 start-snippet-4
     #########################
