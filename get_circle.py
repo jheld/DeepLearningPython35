@@ -215,6 +215,10 @@ if __name__ == '__main__':
         for _ in range(6000):
             c = next(crops)
             ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
+        crops = crop(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', 30, 30, printing=False)
+        for _ in range(6000):
+            c = next(crops)
+            ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
         if args.shuffle_samples:
             random.shuffle(ipsums)
         with open(u'sample_data/lorem_upsem_generated.pkl', 'wb') as circle_output:
