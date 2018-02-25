@@ -198,6 +198,7 @@ if __name__ == '__main__':
     if formatted_te:
         print(u'Test accuracy: {}, {} / {}'.format(te_accurate_count / len(formatted_te), te_accurate_count, len(formatted_te)))
     save_state = input(u'Save the network state?')
+    save_state = save_state or 0
     if int(save_state):
         print(u'Saving the network state')
         net.save(args.network_output_file)
