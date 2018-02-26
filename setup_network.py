@@ -15,16 +15,16 @@ import network2
 from get_circle import pixels_from_circle, training_evaluation_test_split, crop, generate_threshold_adjustments
 
 
-def get_default_input(good_permutations=True):
-    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/{}eval_1_under_30.pkl'.format(u'' if good_permutations else u'standard_'))
+def get_default_input(good_permutations=True, multi_class=True):
+    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/{}eval_1_under_30.pkl'.format(u'permutations' if good_permutations else u''))
     tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_90_under_100.pkl')
     tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/lorem_ipsum_generated.pkl')
     tr_bad += tr_ipsum
     ev_bad += ev_ipsum
     te_bad += te_ipsum
     training = []
-    training.extend(get_formatted_input(tr_good, 1, multi_class=True, use_inner_array=True, convert_scale=True))
-    training.extend(get_formatted_input(tr_bad, 0, multi_class=True, use_inner_array=True, convert_scale=True))
+    training.extend(get_formatted_input(tr_good, 1, multi_class=multi_class, use_inner_array=True, convert_scale=True))
+    training.extend(get_formatted_input(tr_bad, 0, multi_class=multi_class, use_inner_array=True, convert_scale=True))
     evaluation = []
     evaluation.extend(get_formatted_input_not_training(ev_good, 1, use_inner_array=True, convert_scale=True))
     evaluation.extend(get_formatted_input_not_training(ev_bad, 0, use_inner_array=True, convert_scale=True))
@@ -138,12 +138,13 @@ def net_parse_crops(crops, net):
         yield ParseCropResult(idx, cr, y, dc_formatted_cr, result)
 
 
-def net_crops_that_are_good(source_file_path, net):
-    crops = crop(source_file_path, 30, 30)
+def net_crops_that_are_good(source_file_path, net, height=30, width=30, multi_class=True):
+    crops = crop(source_file_path, height, width)
     pcs = net_parse_crops(crops, net)
+    res_idx = 1 if multi_class else 0
     for pc in pcs:
-        print(pc.result, pc.result[1][0])
-        if pc.result[1][0] > 0.7:
+        print(pc.result, pc.result[res_idx][0])
+        if pc.result[res_idx][0] > 0.7:
             yield pc
 
 
@@ -161,24 +162,26 @@ if __name__ == '__main__':
     a_p.add_argument('--shuffle_input', default=0, type=bool)
     a_p.add_argument('--early_stopping_n', default=0, type=int)
     a_p.add_argument(u'--default_good_permutations', default=False)
+    a_p.add_argument(u'--binary_classifier', default=1)
     args = a_p.parse_args()
+    multi_class = bool(int(args.binary_classifier))
     formatted_te = []
     default_good_permutations = int(args.default_good_permutations) if isinstance(args.default_good_permutations, str) else args.default_good_permutations
     if not args.default_input:
         # note, there is no eval and test input support here, yet.
         good_input_file = args.good_input_file_name
         bad_input_file = args.bad_input_file_name
-        formatted_input = get_formatted_input(good_input_file, 1, convert_scale=True, use_inner_array=True)
+        formatted_input = get_formatted_input(good_input_file, 1, convert_scale=True, use_inner_array=True, multi_class=multi_class)
         formatted_input.extend(get_formatted_input(bad_input_file, 0, convert_scale=True, use_inner_array=True))
         formatted_ev = None
     else:
-        formatted_input, formatted_ev, formatted_te = get_default_input(good_permutations=default_good_permutations)
+        formatted_input, formatted_ev, formatted_te = get_default_input(good_permutations=default_good_permutations, multi_class=multi_class)
         if args.shuffle_input:
             print(u'Going to shuffle now.')
             random.shuffle(formatted_input)
             random.shuffle(formatted_ev)
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
-    net = network2.Network([900, args.hidden_nodes, 2])
+    net = network2.Network([900, args.hidden_nodes, 2 if multi_class else 1])
     eta = float(args.eta)
     lmbda = float(args.lmbda)
     print(u'eta: {eta}, lmbda: {lmbda}'.format(eta=eta, lmbda=lmbda))
@@ -193,11 +196,12 @@ if __name__ == '__main__':
     te_accurate_count = 0
     for item in formatted_te:
         te_result = net.feedforward(item[0])
+        result_idx = 1 if multi_class else 0
         if item[1] == 0:
-            if te_result[1][0] < 0.5:
+            if te_result[result_idx][0] < 0.5:
                 te_accurate_count += 1
         else:
-            if te_result[1][0] > 0.5:
+            if te_result[result_idx][0] > 0.5:
                 te_accurate_count += 1
     if formatted_te:
         print(u'Test accuracy: {}, {} / {}'.format(te_accurate_count / len(formatted_te), te_accurate_count, len(formatted_te)))

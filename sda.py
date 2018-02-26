@@ -45,18 +45,18 @@ def sda_attempt(noise_rate=0.3, pre_train_epoch=1, final_epoch=2, fine_tune_epoc
 
     if True:
         tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15),
-                                                                   u'sample_data/standard_eval_1_under_30.pkl')
+                                                                   u'sample_data/eval_1_under_30.pkl')
         tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), 'sample_data/eval_90_under_100.pkl')
         tr_bad_lorem_gen, ev_bad_lorem_gen, te_bad_lorem_gen = training_evaluation_test_split((0.7, 0.15, 0.15), 'sample_data/lorem_ipsum_generated.pkl')
         tr_bad += tr_bad_lorem_gen
         ev_bad += ev_bad_lorem_gen
         te_bad += te_bad_lorem_gen
         formatted_data = []
-        for data_set in zip([tr_good, ], [1, ]):
-            formatted_data.extend(get_formatted_input(*data_set, convert_scale=True, multi_class=True, use_inner_array=False))
+        for data_set in zip([tr_good,], [1,]):
+            formatted_data.extend(get_formatted_input(*data_set, convert_scale=True, multi_class=False, use_inner_array=False))
         formatted_rest_data = []
         for data_set in zip([ev_good, te_good, ], [1, 1, ]):
-            formatted_rest_data.extend(get_formatted_input(*data_set, convert_scale=True, multi_class=True, use_inner_array=False))
+            formatted_rest_data.extend(get_formatted_input(*data_set, convert_scale=True, multi_class=False, use_inner_array=False))
     else:
         tr_ten, ev_ten, te_ten = training_evaluation_test_split((0.70, 0.15, 0.15), 'sample_data/eval_ten_samples.pkl')
         tr_twenty, ev_twenty, te_twenty = training_evaluation_test_split((0.70, 0.15, 0.15), 'sample_data/eval_twenty_samples.pkl')
@@ -106,9 +106,10 @@ def sda_attempt(noise_rate=0.3, pre_train_epoch=1, final_epoch=2, fine_tune_epoc
     return sDA
 
 
-def crops_that_are_good(source_file_path, sDA):
+def crops_that_are_good(source_file_path, sDA, multi_class=True):
     crops = crop(source_file_path, 30, 30)
     pcs = parse_crops(crops, sDA)
+    m_index = 1 if multi_class else 0
     for pc in pcs:
-        if pc[-1][0][1] > 0.5:
+        if pc[-1][0][m_index] > 0.5:
             yield pc

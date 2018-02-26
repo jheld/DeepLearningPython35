@@ -348,7 +348,11 @@ def vectorized_result(j, dimensions=10):
 
     """
     e = np.zeros((dimensions, 1))
-    e[j] = 1.0
+    if dimensions == 1:
+        if j == 1:
+            e[0] = 1.0
+    else:
+        e[j] = 1.0
     return e
 
 def sigmoid(z):

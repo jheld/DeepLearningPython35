@@ -101,9 +101,10 @@ def training_evaluation_test_split(percentages, data):
         with open(data, 'rb') as sample_file:
             data = pickle.loads(sample_file.read())
     original_length = len(data)
-    training_length = int(original_length * percentages[0])
-    evaluation_length = int(original_length * percentages[1])
-    test_length = int(original_length * percentages[2])
+    from math import ceil, floor
+    training_length = int(ceil(original_length * percentages[0]))
+    evaluation_length = int(floor(original_length * percentages[1]))
+    test_length = int(floor(original_length * percentages[2]))
     training_idxs = sorted(random.sample(range(len(data)), training_length), reverse=True)
     training = []
     for idx in training_idxs:
@@ -118,7 +119,10 @@ def training_evaluation_test_split(percentages, data):
     test = []
     for idx in test_idxs:
         test.append(data.pop(idx))
+    for idx in range(len(data)):
+        test.append(data.pop(idx))
     test = test[::-1]
+    print(u'data left over: {}, data: {}'.format(len(data), data))
     return training, evaluation, test
 
 
@@ -178,17 +182,17 @@ if __name__ == '__main__':
                            for adj in adjustments
                            for a in adj]
             adjustments.append(np.array(Image.open(u'images/eval_circle.jpg').convert(u'L')).reshape(900))
-        im = Image.open(u'images/thesis_circles.jpg')
-        im = im.convert(u'L')
-        for i in range(130, 141, 1):
-            for j in range(113, 126, 1):
-                adjustments.append(np.asarray(im.crop((i, j, i+30, j+30))).reshape(900))
-        im.crop((135, 120, 165, 150))
+        # im = Image.open(u'images/thesis_circles.jpg')
+        # im = im.convert(u'L')
+        # for i in range(130, 141, 1):
+        #     for j in range(113, 126, 1):
+        #         adjustments.append(np.asarray(im.crop((i, j, i+30, j+30))).reshape(900))
+        # im.crop((135, 120, 165, 150))
         if args.shuffle_samples:
             random.shuffle(adjustments)
         print(u'will write out')
-        if not args.default_good_permutations:
-            prefix_good = u'standard_'
+        if default_good_permutations:
+            prefix_good = u'permutations_'
         else:
             prefix_good = u''
         with open(u'sample_data/{}eval_1_under_30.pkl'.format(prefix_good), 'wb') as circle_output:
@@ -218,6 +222,9 @@ if __name__ == '__main__':
         crops = crop(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', 30, 30, printing=False)
         for _ in range(6000):
             c = next(crops)
+            ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
+        crops = crop(u'images/eval-0-header_bad.jpg', 30, 30, printing=False)
+        for c in list(crops)[-2000:]:
             ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
         if args.shuffle_samples:
             random.shuffle(ipsums)
