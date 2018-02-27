@@ -151,7 +151,7 @@ def net_crops_that_are_good(source_file_path, net, height=30, width=30, multi_cl
 if __name__ == '__main__':
     a_p = argparse.ArgumentParser()
     a_p.add_argument('epochs', type=int)
-    a_p.add_argument('hidden_nodes', type=int)
+    a_p.add_argument('hidden_nodes', type=str)
     a_p.add_argument('--good_input_file_name', type=str)
     a_p.add_argument('--bad_input_file_name', type=str)
     a_p.add_argument(u'--lmbda', default=0.0)
@@ -165,6 +165,7 @@ if __name__ == '__main__':
     args = a_p.parse_args()
     multi_class = bool(int(args.binary_classifier))
     formatted_te = []
+    hidden_nodes = list(map(int, args.hidden_nodes.split(u',')))
     default_good_permutations = int(args.default_good_permutations) if isinstance(args.default_good_permutations, str) else args.default_good_permutations
     if not args.default_input:
         # note, there is no eval and test input support here, yet.
@@ -181,7 +182,7 @@ if __name__ == '__main__':
             random.shuffle(formatted_input)
             random.shuffle(formatted_ev)
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
-    net = network2.Network([900, args.hidden_nodes, 2 if multi_class else 1])
+    net = network2.Network([900, *hidden_nodes, 2 if multi_class else 1])
     eta = float(args.eta)
     lmbda = float(args.lmbda)
     print(u'eta: {eta}, lmbda: {lmbda}'.format(eta=eta, lmbda=lmbda))
