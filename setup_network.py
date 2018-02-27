@@ -16,7 +16,7 @@ from get_circle import pixels_from_circle, training_evaluation_test_split, crop,
 
 
 def get_default_input(good_permutations=True, multi_class=True):
-    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/{}eval_1_under_30.pkl'.format(u'permutations' if good_permutations else u''))
+    tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/{}eval_1_under_30.pkl'.format(u'permutations_' if good_permutations else u''))
     tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_90_under_100.pkl')
     tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/lorem_ipsum_generated.pkl')
     tr_bad += tr_ipsum
@@ -24,13 +24,13 @@ def get_default_input(good_permutations=True, multi_class=True):
     te_bad += te_ipsum
     training = []
     training.extend(get_formatted_input(tr_good, 1, multi_class=multi_class, use_inner_array=True, convert_scale=True))
-    training.extend(get_formatted_input(tr_bad, 0, multi_class=multi_class, use_inner_array=True, convert_scale=True))
+    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), np.array([np.array([1]), np.array([0])])]) for item in tr_bad])
     evaluation = []
     evaluation.extend(get_formatted_input_not_training(ev_good, 1, use_inner_array=True, convert_scale=True))
-    evaluation.extend(get_formatted_input_not_training(ev_bad, 0, use_inner_array=True, convert_scale=True))
+    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 0]) for item in ev_bad])
     testing = []
     testing.extend(get_formatted_input_not_training(te_good, 1, use_inner_array=True, convert_scale=True))
-    testing.extend(get_formatted_input_not_training(te_bad, 0, use_inner_array=True, convert_scale=True))
+    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 0]) for item in te_bad])
     return training, evaluation, testing
 
 
@@ -150,7 +150,6 @@ def net_crops_that_are_good(source_file_path, net, height=30, width=30, multi_cl
 
 if __name__ == '__main__':
     a_p = argparse.ArgumentParser()
-    a_p.add_argument('network_output_file', type=str)
     a_p.add_argument('epochs', type=int)
     a_p.add_argument('hidden_nodes', type=int)
     a_p.add_argument('--good_input_file_name', type=str)
@@ -175,7 +174,8 @@ if __name__ == '__main__':
         formatted_input.extend(get_formatted_input(bad_input_file, 0, convert_scale=True, use_inner_array=True))
         formatted_ev = None
     else:
-        formatted_input, formatted_ev, formatted_te = get_default_input(good_permutations=default_good_permutations, multi_class=multi_class)
+        formatted_input, formatted_ev, formatted_te = pickle.load(open(u'sample_data/default_input_with_header.pkl', 'rb'))
+        # formatted_input, formatted_ev, formatted_te = get_default_input(good_permutations=default_good_permutations, multi_class=multi_class)
         if args.shuffle_input:
             print(u'Going to shuffle now.')
             random.shuffle(formatted_input)
@@ -208,5 +208,6 @@ if __name__ == '__main__':
     save_state = input(u'Save the network state?')
     save_state = save_state or 0
     if int(save_state):
-        print(u'Saving the network state')
-        net.save(args.network_output_file)
+        network_output_file = u'eval_network_epoch_{}_hidden_{}_eta_{}_lmbda_{}_n_{}{}'.format(args.epochs, args.hidden_nodes, eta, lmbda, args.early_stopping_n, u'' if multi_class else u'_unary')
+        print(u'Saving the network state: {}'.format(network_output_file))
+        net.save(network_output_file)

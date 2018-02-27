@@ -262,7 +262,7 @@ class dA(object):
 
 def test_dA(learning_rate=0.1, training_epochs=15,
             dataset='mnist.pkl.gz',
-            batch_size=20, output_folder='dA_plots'):
+            batch_size=20, height=28, width=28, output_folder='dA_plots'):
 
     """
     This demo is tested on MNIST
@@ -305,7 +305,7 @@ def test_dA(learning_rate=0.1, training_epochs=15,
         numpy_rng=rng,
         theano_rng=theano_rng,
         input=x,
-        n_visible=28 * 28,
+        n_visible=height * width,
         n_hidden=500
     )
 

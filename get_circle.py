@@ -169,7 +169,7 @@ if __name__ == '__main__':
             all_adjustments = []
             for idx, bubble in enumerate(bubble_permutation()):
                 adjustments = generate_threshold_adjustments(bubble, 1, 10, 2, rand_range=[255, 256],
-                                                             dark_cut_off=200, num_samples=20)
+                                                             dark_cut_off=200, num_samples=30)
                 print(idx)
                 adjustments = [list(a)
                                for adj in adjustments
@@ -214,21 +214,26 @@ if __name__ == '__main__':
         ipsums = []
         for _ in range(6000):
             c = next(crops)
-            ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
+            as_array = np.asarray(c.convert(u'L'))
+            ipsums.append(as_array.reshape(as_array.size))
         crops = crop(u'sample_data/thesis_lorem_ipsum_9.jpg', 30, 30, printing=False)
         for _ in range(6000):
             c = next(crops)
-            ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
+            as_array = np.asarray(c.convert(u'L'))
+            ipsums.append(as_array.reshape(as_array.size))
         crops = crop(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', 30, 30, printing=False)
         for _ in range(6000):
             c = next(crops)
-            ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
+            as_array = np.asarray(c.convert(u'L'))
+            ipsums.append(as_array.reshape(as_array.size))
         crops = crop(u'images/eval-0-header_bad.jpg', 30, 30, printing=False)
-        for c in list(crops)[-2000:]:
-            ipsums.append(np.asarray(c.convert(u'L')).reshape(c.size))
+        len_before_header_bad = len(ipsums)
+        for c in crops:
+            as_array = np.asarray(c.convert(u'L'))
+            ipsums.append(as_array.reshape(as_array.size))
         if args.shuffle_samples:
             random.shuffle(ipsums)
-        with open(u'sample_data/lorem_upsem_generated.pkl', 'wb') as circle_output:
+        with open(u'sample_data/lorem_ipsum_generated.pkl', 'wb') as circle_output:
             pickle.dump(ipsums, circle_output)
     if not args.default_good and not args.default_bad and not args.default_ipsum:
         output_samples = adjust_from_circle(args.circle_file_path, args.random_threshold, args.rand_range, args.num_samples,
