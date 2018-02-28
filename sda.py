@@ -13,7 +13,7 @@ from setup_network import get_formatted_input, get_formatted_input_not_training,
 
 
 def back_to_greyscale(data):
-    data = numpy.array([255 - float(round(i)) * 255 for i in data.reshape(data.size)]).reshape(*data.shape)
+    data = numpy.array([255 - i * 255 for i in data.reshape(data.size)]).reshape(*data.shape)
     return data
 
 

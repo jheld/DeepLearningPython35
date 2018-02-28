@@ -32,6 +32,7 @@ def pixels_from_circle(circle_data, regular_array=True):
 
 def crop(file_path, height, width, printing=True):
     im = Image.open(file_path)
+    im = im.convert(u'L')
     imgwidth, imgheight = im.size
     # slide a window across the image
     for y in range(0, imgheight, 1):
@@ -40,7 +41,32 @@ def crop(file_path, height, width, printing=True):
             if y + height < imgheight and x + width < imgwidth:
                 if printing:
                     print(x, x + width, y, y + height)
-                yield im.crop((x, y, x + width, y + height))
+                cropped_im = Image.new(u'L', (30, 30))
+                cropped_im.paste(im.crop((x, y, x + width, y + height)))
+                yield cropped_im
+
+
+def crop_list(file_path, height, width, printing=True):
+    """
+    Very expensive, but can be used (on its own)
+    :param file_path:
+    :param height:
+    :param width:
+    :param printing:
+    :return:
+    """
+    im = Image.open(file_path)
+    imgwidth, imgheight = im.size
+    all_crops = []
+    # slide a window across the image
+    for y in range(0, imgheight, 1):
+        for x in range(0, imgwidth, 1):
+            # yield the current window
+            if y + height < imgheight and x + width < imgwidth:
+                if printing:
+                    print(x, x + width, y, y + height)
+                all_crops.append(im.crop((x, y, x + width, y + height)))
+    return all_crops
 
 
 def save_image_as_jpg(circle_data, output_file_name):
@@ -106,23 +132,15 @@ def training_evaluation_test_split(percentages, data):
     evaluation_length = int(floor(original_length * percentages[1]))
     test_length = int(floor(original_length * percentages[2]))
     training_idxs = sorted(random.sample(range(len(data)), training_length), reverse=True)
-    training = []
-    for idx in training_idxs:
-        training.append(data.pop(idx))
+    training = [data.pop(idx) for idx in training_idxs]
     training = training[::-1]
     evaluation_idxs = sorted(random.sample(range(len(data)), evaluation_length), reverse=True)
-    evaluation = []
-    for idx in evaluation_idxs:
-        evaluation.append(data.pop(idx))
+    evaluation = [data.pop(idx) for idx in evaluation_idxs]
     evaluation = evaluation[::-1]
     test_idxs = sorted(random.sample(range(len(data)), test_length), reverse=True)
-    test = []
-    for idx in test_idxs:
-        test.append(data.pop(idx))
-    for idx in range(len(data)):
-        test.append(data.pop(idx))
+    test = [data.pop(idx) for idx in test_idxs]
+    test.extend([data.pop(idx) for idx in range(len(data))])
     test = test[::-1]
-    print(u'data left over: {}, data: {}'.format(len(data), data))
     return training, evaluation, test
 
 

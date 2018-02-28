@@ -12,24 +12,25 @@ import numpy as np
 from future.builtins import open, str
 
 import network2
-from get_circle import pixels_from_circle, training_evaluation_test_split, crop, generate_threshold_adjustments
+from get_circle import pixels_from_circle, training_evaluation_test_split, crop, generate_threshold_adjustments, \
+    crop_list
 
 
 def get_default_input(good_permutations=True, multi_class=True):
     tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/{}eval_1_under_30.pkl'.format(u'permutations_' if good_permutations else u''))
     tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_90_under_100.pkl')
     tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/lorem_ipsum_generated.pkl')
-    tr_bad += tr_ipsum
-    ev_bad += ev_ipsum
-    te_bad += te_ipsum
+    tr_bad.extend(tr_ipsum)
+    ev_bad.extend(ev_ipsum)
+    te_bad.extend(te_ipsum)
     training = []
-    training.extend(get_formatted_input(tr_good, 1, multi_class=multi_class, use_inner_array=True, convert_scale=True))
+    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), np.array([np.array([0]), np.array([1])])]) for item in tr_good])
     training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), np.array([np.array([1]), np.array([0])])]) for item in tr_bad])
     evaluation = []
-    evaluation.extend(get_formatted_input_not_training(ev_good, 1, use_inner_array=True, convert_scale=True))
+    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 1]) for item in ev_good])
     evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 0]) for item in ev_bad])
     testing = []
-    testing.extend(get_formatted_input_not_training(te_good, 1, use_inner_array=True, convert_scale=True))
+    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 1]) for item in te_good])
     testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 0]) for item in te_bad])
     return training, evaluation, testing
 
@@ -109,7 +110,8 @@ def get_formatted_input_not_training(input_data, classifier, convert_scale=False
     return inner_arrays
 
 
-ParseCropResult = namedtuple(u'ParseCropResult', [u'idx', u'cr', u'cr_scaled', u'dc_formatted_cr', u'result'])
+ParseCropResultSDA = namedtuple(u'ParseCropResult', [u'idx', u'cr', u'cr_scaled', u'dc_formatted_cr', u'result'])
+ParseCropResult = namedtuple(u'ParseCropResult', [u'idx', u'cr', u'cr_scaled', u'result'])
 
 
 def parse_crops(crops, sDA):
@@ -121,21 +123,17 @@ def parse_crops(crops, sDA):
         y = np.array([y])
         dc_formatted_cr = deepcopy(y)
         result = sDA.predict(dc_formatted_cr)
-        yield ParseCropResult(idx, cr, y, dc_formatted_cr, result)
+        yield ParseCropResultSDA(idx, cr, y, dc_formatted_cr, result)
 
 
 def net_parse_crops(crops, net):
     for idx, cr in enumerate(crops):
         cr = cr.convert('L')
-        y = np.asarray(cr.getdata(), dtype=np.float64).reshape(cr.size)
-        y = np.asarray(y, dtype=np.uint8)
+        y = np.asarray(cr, dtype=np.uint8).reshape(cr.size[0] * cr.size[1])
         y = np.array([1 - i/255 for i in y])
-        y = y.reshape(y.size, -1)
-        y = np.array([y])
-        # dc_formatted_cr = deepcopy(y)
-        dc_formatted_cr = y
-        result = net.feedforward(dc_formatted_cr[0])
-        yield ParseCropResult(idx, cr, y, dc_formatted_cr, result)
+        y = y.reshape(y.size, 1)
+        result = net.feedforward(y)
+        yield ParseCropResult(idx, cr, y, result)
 
 
 def net_crops_that_are_good(source_file_path, net, height=30, width=30, multi_class=True):
