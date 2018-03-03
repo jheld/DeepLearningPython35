@@ -3,6 +3,7 @@ from __future__ import unicode_literals, division, print_function
 import argparse
 import pickle
 import random
+from collections import namedtuple
 
 import numpy as np
 from PIL import Image
@@ -30,6 +31,9 @@ def pixels_from_circle(circle_data, regular_array=True):
         return y
 
 
+CropResult = namedtuple(u'CropResult', [u'box', u'cr'])
+
+
 def crop(file_path, height, width, printing=True):
     im = Image.open(file_path)
     im = im.convert(u'L')
@@ -41,9 +45,7 @@ def crop(file_path, height, width, printing=True):
             if y + height < imgheight and x + width < imgwidth:
                 if printing:
                     print(x, x + width, y, y + height)
-                cropped_im = Image.new(u'L', (30, 30))
-                cropped_im.paste(im.crop((x, y, x + width, y + height)))
-                yield cropped_im
+                yield CropResult((x, x + width, y, y + height), im.crop((x, y, x + width, y + height)))
 
 
 def crop_list(file_path, height, width, printing=True):
@@ -79,7 +81,7 @@ def save_image_as_jpg(circle_data, output_file_name):
     Image.fromarray(circle_data).save(output_file_name)
 
 
-def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_samples=1000, dark_cut_off=30):
+def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_samples=1000, dark_cut_off=30, rotations=None):
     """
 
     :param circle_data:
@@ -109,10 +111,20 @@ def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_s
         #         sample.append(item)
         # yield sample
 
-        yield [random.randrange(*rand_range)
-               if item < dark_cut_off and random.random() <= random_threshold
-               else item
-               for item in circle_data]
+        new_adjustment = [random.randrange(*rand_range)
+                          if item < dark_cut_off and random.random() <= random_threshold
+                          else item
+                          for item in circle_data]
+        yield new_adjustment
+        if rotations:
+            adj_img = Image.fromarray(np.array(new_adjustment).reshape(30, 30))
+            for rotation in rotations:
+                im2 = adj_img.convert(u'RGBA')
+                rot = im2.rotate(rotation)
+                fff = Image.new('RGBA', rot.size, (255,) * 4)
+                out = Image.composite(rot, fff, rot)
+                as_array = np.asarray(out.convert(u'L'))
+                yield list(as_array)
 
 
 def training_evaluation_test_split(percentages, data):
@@ -166,6 +178,14 @@ def bubble_permutation():
             yield np.asarray(im.crop((i, j, i+30, j+30))).reshape(900)
 
 
+def bubble_permutation_0():
+    im = Image.open(u'images/eval-0_circle.jpg')
+    im = im.convert(u'L')
+    for i in range(130, 141, 1):
+        for j in range(113, 126, 1):
+            yield np.asarray(im.crop((i, j, i+30, j+30))).reshape(900)
+
+
 if __name__ == '__main__':
     a_p = argparse.ArgumentParser()
     a_p.add_argument(u'circle_file_path', type=str)
@@ -187,16 +207,16 @@ if __name__ == '__main__':
             all_adjustments = []
             for idx, bubble in enumerate(bubble_permutation()):
                 adjustments = generate_threshold_adjustments(bubble, 1, 10, 2, rand_range=[255, 256],
-                                                             dark_cut_off=200, num_samples=30)
+                                                             dark_cut_off=200, num_samples=50)
                 print(idx)
-                adjustments = [list(a)
+                adjustments = [np.array(a)
                                for adj in adjustments
                                for a in adj]
                 all_adjustments.extend(adjustments)
             adjustments = all_adjustments
         else:
-            adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 15, 1, rand_range=[255, 256], dark_cut_off=200)
-            adjustments = [list(a)
+            adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 20, 1, rand_range=[255, 256], dark_cut_off=200, rotations=[90, 180, 270])
+            adjustments = [np.array(a)
                            for adj in adjustments
                            for a in adj]
             adjustments.append(np.array(Image.open(u'images/eval_circle.jpg').convert(u'L')).reshape(900))
@@ -219,7 +239,7 @@ if __name__ == '__main__':
         del adjustments
     if args.default_bad:
         adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 90, 100, 3, rand_range=[255, 256], dark_cut_off=200)
-        adjustments = [list(a)
+        adjustments = [np.array(a)
                        for adj in adjustments
                        for a in adj]
         adjustments.append(np.array([255 for _ in range(900)]))
@@ -227,30 +247,106 @@ if __name__ == '__main__':
             random.shuffle(adjustments)
         with open(u'sample_data/eval_90_under_100.pkl', 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
-    if args.default_ipsum:
-        crops = crop(u'sample_data/thesis_lorem_ipsum.jpg', 30, 30, printing=False)
-        ipsums = []
-        for _ in range(6000):
-            c = next(crops)
-            as_array = np.asarray(c.convert(u'L'))
-            ipsums.append(as_array.reshape(as_array.size))
-        crops = crop(u'sample_data/thesis_lorem_ipsum_9.jpg', 30, 30, printing=False)
-        for _ in range(6000):
-            c = next(crops)
-            as_array = np.asarray(c.convert(u'L'))
-            ipsums.append(as_array.reshape(as_array.size))
-        crops = crop(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', 30, 30, printing=False)
-        for _ in range(6000):
-            c = next(crops)
-            as_array = np.asarray(c.convert(u'L'))
-            ipsums.append(as_array.reshape(as_array.size))
-        crops = crop(u'images/eval-0-header_bad.jpg', 30, 30, printing=False)
-        len_before_header_bad = len(ipsums)
+
+        half_right = np.array(Image.open('images/eval_circle_right_half.jpg').convert(u'L')).reshape(900)
+        with open(u'sample_data/eval_half_right.pkl', 'wb') as circle_output:
+            pickle.dump([half_right], circle_output)
+
+        crops = crop(u'images/qr_codes_small.jpg', 30, 30, printing=False)
+        qr_codes = []
         for c in crops:
             as_array = np.asarray(c.convert(u'L'))
-            ipsums.append(as_array.reshape(as_array.size))
+            qr_codes.append(as_array)
+        with open(u'sample_data/qr_codes_small.pkl', 'wb') as circle_output:
+            pickle.dump(qr_codes, circle_output)
+
+        crops = crop(u'images/numbered_list_cropped.jpg', 30, 30, printing=False)
+        qr_codes = []
+        for c in crops:
+            as_array = np.asarray(c.convert(u'L'))
+            qr_codes.append(as_array)
+        with open(u'sample_data/numbered_list_cropped.pkl', 'wb') as circle_output:
+            pickle.dump(qr_codes, circle_output)
+    if args.default_ipsum:
+        # crops = crop(u'sample_data/thesis_lorem_ipsum.jpg', 30, 30, printing=False)
+        ipsums = []
+        # for _ in range(12000):
+        #     c = next(crops)
+        #     as_array = np.asarray(c.convert(u'L'))
+        #     ipsums.append(as_array.reshape(as_array.size))
+        crops = crop(u'sample_data/thesis_lorem_ipsum_9.jpg', 30, 30, printing=False)
+        for _ in range(2000):
+            try:
+                c = next(crops)
+                for degrees in range(0, 360, 90):
+                    im2 = c.convert(u'RGBA')
+                    rot = im2.rotate(degrees)
+                    fff = Image.new('RGBA', rot.size, (255,) * 4)
+                    out = Image.composite(rot, fff, rot)
+                    as_array = np.asarray(out.convert(u'L'))
+                    ipsums.append(as_array)
+            except StopIteration:
+                break
+        crops = crop(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', 30, 30, printing=False)
+        for _ in range(2000):
+            try:
+                c = next(crops)
+                for degrees in range(0, 360, 90):
+                    im2 = c.convert(u'RGBA')
+                    rot = im2.rotate(degrees)
+                    fff = Image.new('RGBA', rot.size, (255,) * 4)
+                    out = Image.composite(rot, fff, rot)
+                    as_array = np.asarray(out.convert(u'L'))
+                    ipsums.append(as_array)
+            except StopIteration:
+                break
+        crops = crop(u'images/thesis_lorem_ipsum_9_2_line_cropped.jpg', 30, 30, printing=False)
+        for _ in range(2000):
+            try:
+                c = next(crops)
+                for degrees in range(0, 360, 90):
+                    im2 = c.convert(u'RGBA')
+                    rot = im2.rotate(degrees)
+                    fff = Image.new('RGBA', rot.size, (255,) * 4)
+                    out = Image.composite(rot, fff, rot)
+                    as_array = np.asarray(out.convert(u'L'))
+                    ipsums.append(as_array)
+            except StopIteration:
+                break
+        crops = crop(u'images/thesis_lorem_ipsum_7_2_line.jpg', 30, 30, printing=False)
+        for _ in range(2000):
+            try:
+                c = next(crops)
+                for degrees in range(0, 360, 90):
+                    im2 = c.convert(u'RGBA')
+                    rot = im2.rotate(degrees)
+                    fff = Image.new('RGBA', rot.size, (255,) * 4)
+                    out = Image.composite(rot, fff, rot)
+                    as_array = np.asarray(out.convert(u'L'))
+                    ipsums.append(as_array)
+            except StopIteration:
+                break
+        crops = crop(u'images/thesis_lorem_ipsum_7.5_2_line.jpg', 30, 30, printing=False)
+        for _ in range(2000):
+            try:
+                c = next(crops)
+                for degrees in range(0, 360, 90):
+                    im2 = c.convert(u'RGBA')
+                    rot = im2.rotate(degrees)
+                    fff = Image.new('RGBA', rot.size, (255,) * 4)
+                    out = Image.composite(rot, fff, rot)
+                    as_array = np.asarray(out.convert(u'L'))
+                    ipsums.append(as_array)
+            except StopIteration:
+                break
+        # crops = crop(u'images/eval-0-header_bad.jpg', 30, 30, printing=False)
+        # len_before_header_bad = len(ipsums)
+        # for c in crops:
+        #     as_array = np.asarray(c.convert(u'L'))
+        #     ipsums.append(as_array.reshape(as_array.size))
         if args.shuffle_samples:
             random.shuffle(ipsums)
+        print(u'Number ipsums: {}'.format(len(ipsums)))
         with open(u'sample_data/lorem_ipsum_generated.pkl', 'wb') as circle_output:
             pickle.dump(ipsums, circle_output)
     if not args.default_good and not args.default_bad and not args.default_ipsum:

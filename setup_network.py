@@ -8,22 +8,34 @@ from collections import namedtuple
 from copy import deepcopy
 
 import numpy as np
+from PIL import Image, ImageDraw
 
 from future.builtins import open, str
 
 import network2
 from get_circle import pixels_from_circle, training_evaluation_test_split, crop, generate_threshold_adjustments, \
-    crop_list
+    crop_list, CropResult
 
 
 def get_default_input(good_permutations=True, multi_class=True):
     tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/{}eval_1_under_30.pkl'.format(u'permutations_' if good_permutations else u''))
     tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_90_under_100.pkl')
     tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/lorem_ipsum_generated.pkl')
+    tr_qr, ev_qr, te_qr = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/qr_codes_small.pkl')
+    tr_numbered, ev_numbered, te_numbered = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/numbered_list_cropped.pkl')
     tr_bad.extend(tr_ipsum)
     ev_bad.extend(ev_ipsum)
     te_bad.extend(te_ipsum)
+    tr_bad.extend(tr_qr)
+    ev_bad.extend(ev_qr)
+    te_bad.extend(te_qr)
+    tr_bad.extend(tr_numbered)
+    ev_bad.extend(ev_numbered)
+    te_bad.extend(te_numbered)
     training = []
+    with open(u'sample_data/eval_half_right.pkl', 'rb') as circle_input:
+        half_right_circles = pickle.load(circle_input)
+        tr_bad.extend(half_right_circles)
     training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), np.array([np.array([0]), np.array([1])])]) for item in tr_good])
     training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), np.array([np.array([1]), np.array([0])])]) for item in tr_bad])
     evaluation = []
@@ -111,7 +123,7 @@ def get_formatted_input_not_training(input_data, classifier, convert_scale=False
 
 
 ParseCropResultSDA = namedtuple(u'ParseCropResult', [u'idx', u'cr', u'cr_scaled', u'dc_formatted_cr', u'result'])
-ParseCropResult = namedtuple(u'ParseCropResult', [u'idx', u'cr', u'cr_scaled', u'result'])
+ParseCropResult = namedtuple(u'ParseCropResult', [u'idx', u'cr_res', u'cr_scaled', u'result'])
 
 
 def parse_crops(crops, sDA):
@@ -126,24 +138,103 @@ def parse_crops(crops, sDA):
         yield ParseCropResultSDA(idx, cr, y, dc_formatted_cr, result)
 
 
-def net_parse_crops(crops, net):
-    for idx, cr in enumerate(crops):
-        cr = cr.convert('L')
-        y = np.asarray(cr, dtype=np.uint8).reshape(cr.size[0] * cr.size[1])
+def get_better(s_fm, net_proc):
+    better_fm = []
+    for f_idx, fm in enumerate(s_fm):
+        count = 0
+        max_matches = len(list(range(45, 360, 45)))
+        for idx in range(45, 360, 45):
+            r = net_proc.feedforward(np.array([1 - i / 255
+                                               for i in np.array(make_rotation(fm.cr_res.cr, idx))]
+                                              ).reshape(fm.cr_res.cr.size[0] * fm.cr_res.cr.size[1], 1))
+            if r[1][0] >= 0.9:
+                count += 1
+        if count == max_matches:
+            better_fm.append((f_idx, fm))
+    return better_fm
+
+
+def draw_hits(parsed_rows, source_image):
+    source_image = source_image.convert(u'RGBA')
+    draw = ImageDraw.Draw(source_image)
+    for p_r in parsed_rows:
+        for item in p_r:
+            draw.rectangle(
+                (item[1].cr_res.box[0], item[1].cr_res.box[2], item[1].cr_res.box[1], item[1].cr_res.box[3]),
+                outline='red')
+    source_image.show()
+
+
+def make_rotation(cr_img, rotation):
+   im2 = cr_img.convert(u'RGBA')
+   rot = im2.rotate(rotation)
+   fff = Image.new('RGBA', rot.size, (255,) * 4)
+   out = Image.composite(rot, fff, rot)
+   return out.convert(u'L')
+
+
+def get_rows(items, x_threshold=15, y_threshold=15):
+    sorted_by_y_start = sorted(items, key=lambda x: x[1].cr_res.box[2])
+    prev_start = 0
+    for target_item in sorted_by_y_start:
+        if prev_start == 0:
+            prev_start = target_item[1].cr_res.box[2]
+        if prev_start - y_threshold <= target_item[1].cr_res.box[2]:
+            yield find_per_row(sorted_by_y_start, target_item[1].cr_res.box[2], x_threshold=x_threshold, y_threshold=y_threshold)
+            prev_start = target_item[1].cr_res.box[3] + 5
+
+
+def find_per_row(items, y_start, x_threshold=15, y_threshold=15):
+    prev_start = 0
+    sorted_by_x_start = sorted(items, key=lambda x: x[1].cr_res.box[0])
+    best_by_row = []
+    for idx, target_item in enumerate(sorted_by_x_start):
+        if y_start - y_threshold <= target_item[1].cr_res.box[2] <= y_start + y_threshold:
+            if prev_start == 0:
+                prev_start = target_item[1].cr_res.box[0]
+            if prev_start <= target_item[1].cr_res.box[0]:
+                best = find_similar_item_get_best(target_item, items, x_threshold=x_threshold, y_threshold=y_threshold)
+                # found the best match against this item (row's slot x), so we don't want to look at another
+                # unless it is past the end of this one's slot by some appropriate margin (this one's end + 5)
+                prev_start = best[1].cr_res.box[1] + 5
+                best_by_row.append(best)
+    return best_by_row
+
+
+def find_similar_item_get_best(target_item, items, x_threshold=15, y_threshold=15):
+    x_start = target_item[1].cr_res.box[0]
+    y_start = target_item[1].cr_res.box[2]
+    similar_item = [comp_item
+                    for comp_item in items
+                    if y_start - y_threshold <= comp_item[1].cr_res.box[2] <= y_start + y_threshold and
+                    x_start - x_threshold <= comp_item[1].cr_res.box[0] <=
+                    x_start + x_threshold]
+    return sorted(similar_item, key=lambda x: x[1].result[1][0])[-1]
+
+
+def net_parse_crops(crops: CropResult, net_proc: network2.Network):
+    for idx, cr_res in enumerate(crops):
+        cr = cr_res.cr
+        y = np.asarray(cr, dtype=np.uint8)
         y = np.array([1 - i/255 for i in y])
         y = y.reshape(y.size, 1)
-        result = net.feedforward(y)
-        yield ParseCropResult(idx, cr, y, result)
+        result = net_proc.feedforward(y)
+        yield ParseCropResult(idx, cr_res, y, result)
 
 
-def net_crops_that_are_good(source_file_path, net, height=30, width=30, multi_class=True):
+def net_crops_that_are_good(source_file_path, net_proc, height=30, width=30, multi_class=True):
     crops = crop(source_file_path, height, width)
-    pcs = net_parse_crops(crops, net)
+    pcs = net_parse_crops(crops, net_proc)
+    full_size = height * width
     res_idx = 1 if multi_class else 0
     for pc in pcs:
-        print(pc.result, pc.result[res_idx][0])
-        if pc.result[res_idx][0] > 0.7:
-            yield pc
+        if pc.result[res_idx][0] >= 0.9:
+            print(pc.result, pc.result[res_idx][0])
+            if len([1 for idx in range(1, 4)
+                    if net_proc.feedforward(np.array([1 - i / 255
+                                                      for i in np.array(pc.cr_res.cr.rotate(90 * idx))]
+                                                     ).reshape(full_size, 1))[1][0] >= 0.9]) >= 2:
+                yield pc
 
 
 if __name__ == '__main__':
@@ -161,7 +252,7 @@ if __name__ == '__main__':
     a_p.add_argument(u'--default_good_permutations', default=False)
     a_p.add_argument(u'--binary_classifier', default=1)
     args = a_p.parse_args()
-    multi_class = bool(int(args.binary_classifier))
+    is_multi_class = bool(int(args.binary_classifier))
     formatted_te = []
     hidden_nodes = list(map(int, args.hidden_nodes.split(u',')))
     default_good_permutations = int(args.default_good_permutations) if isinstance(args.default_good_permutations, str) else args.default_good_permutations
@@ -169,18 +260,19 @@ if __name__ == '__main__':
         # note, there is no eval and test input support here, yet.
         good_input_file = args.good_input_file_name
         bad_input_file = args.bad_input_file_name
-        formatted_input = get_formatted_input(good_input_file, 1, convert_scale=True, use_inner_array=True, multi_class=multi_class)
+        formatted_input = get_formatted_input(good_input_file, 1, convert_scale=True, use_inner_array=True, multi_class=is_multi_class)
         formatted_input.extend(get_formatted_input(bad_input_file, 0, convert_scale=True, use_inner_array=True))
         formatted_ev = None
     else:
-        formatted_input, formatted_ev, formatted_te = pickle.load(open(u'sample_data/default_input_with_header.pkl', 'rb'))
+        u'sample_data/default_input.pkl'.format(u'' if default_good_permutations else u'_regular')
+        formatted_input, formatted_ev, formatted_te = pickle.load(open(u'sample_data/default_input.pkl', 'rb'))
         # formatted_input, formatted_ev, formatted_te = get_default_input(good_permutations=default_good_permutations, multi_class=multi_class)
         if args.shuffle_input:
             print(u'Going to shuffle now.')
             random.shuffle(formatted_input)
             random.shuffle(formatted_ev)
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
-    net = network2.Network([900, *hidden_nodes, 2 if multi_class else 1])
+    net = network2.Network([900, *hidden_nodes, 2 if is_multi_class else 1])
     eta = float(args.eta)
     lmbda = float(args.lmbda)
     print(u'eta: {eta}, lmbda: {lmbda}'.format(eta=eta, lmbda=lmbda))
@@ -195,7 +287,7 @@ if __name__ == '__main__':
     te_accurate_count = 0
     for item in formatted_te:
         te_result = net.feedforward(item[0])
-        result_idx = 1 if multi_class else 0
+        result_idx = 1 if is_multi_class else 0
         if item[1] == 0:
             if te_result[result_idx][0] < 0.5:
                 te_accurate_count += 1
@@ -207,6 +299,6 @@ if __name__ == '__main__':
     save_state = input(u'Save the network state?')
     save_state = save_state or 0
     if int(save_state):
-        network_output_file = u'eval_network_epoch_{}_hidden_{}_eta_{}_lmbda_{}_n_{}{}'.format(args.epochs, args.hidden_nodes, eta, lmbda, args.early_stopping_n, u'' if multi_class else u'_unary')
+        network_output_file = u'eval_network_epoch_{}_hidden_{}_eta_{}_lmbda_{}_n_{}{}'.format(args.epochs, args.hidden_nodes, eta, lmbda, args.early_stopping_n, u'' if is_multi_class else u'_unary')
         print(u'Saving the network state: {}'.format(network_output_file))
         net.save(network_output_file)
