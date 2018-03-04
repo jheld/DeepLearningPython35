@@ -165,6 +165,7 @@ def draw_hits(parsed_rows, source_image):
     source_image.show()
     return source_image
 
+
 def make_rotation(cr_img, rotation):
    im2 = cr_img.convert(u'RGBA')
    rot = im2.rotate(rotation)
@@ -222,14 +223,15 @@ def net_parse_crops(crops: CropResult, net_proc: network2.Network):
         yield ParseCropResult(idx, cr_res, y, result)
 
 
-def net_crops_that_are_good(source_file_path, net_proc, height=30, width=30, multi_class=True):
-    crops = crop(source_file_path, height, width)
+def net_crops_that_are_good(source_file_path, net_proc, height=30, width=30, multi_class=True, printing=True):
+    crops = crop(source_file_path, height, width, printing=printing)
     pcs = net_parse_crops(crops, net_proc)
     full_size = height * width
     res_idx = 1 if multi_class else 0
     for pc in pcs:
         if pc.result[res_idx][0] >= 0.9:
-            print(pc.result, pc.result[res_idx][0])
+            if printing:
+                print(pc.result, pc.result[res_idx][0])
             if len([1 for idx in range(1, 4)
                     if net_proc.feedforward(np.array([1 - i / 255
                                                       for i in np.array(pc.cr_res.cr.rotate(90 * idx))]
