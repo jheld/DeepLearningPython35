@@ -163,7 +163,7 @@ def draw_hits(parsed_rows, source_image):
                 (item[1].cr_res.box[0], item[1].cr_res.box[2], item[1].cr_res.box[1], item[1].cr_res.box[3]),
                 outline='red')
     source_image.show()
-
+    return source_image
 
 def make_rotation(cr_img, rotation):
    im2 = cr_img.convert(u'RGBA')
