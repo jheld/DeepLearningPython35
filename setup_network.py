@@ -36,14 +36,14 @@ def get_default_input(good_permutations=True, multi_class=True):
     with open(u'sample_data/eval_half_right.pkl', 'rb') as circle_input:
         half_right_circles = pickle.load(circle_input)
         tr_bad.extend(half_right_circles)
-    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), np.array([np.array([0]), np.array([1])])]) for item in tr_good])
-    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), np.array([np.array([1]), np.array([0])])]) for item in tr_bad])
+    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), np.array([np.array([0]), np.array([1])])]) for item in tr_good])
+    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), np.array([np.array([1]), np.array([0])])]) for item in tr_bad])
     evaluation = []
-    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 1]) for item in ev_good])
-    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 0]) for item in ev_bad])
+    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), 1]) for item in ev_good])
+    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), 0]) for item in ev_bad])
     testing = []
-    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 1]) for item in te_good])
-    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]), 0]) for item in te_bad])
+    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), 1]) for item in te_good])
+    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), 0]) for item in te_bad])
     return training, evaluation, testing
 
 
@@ -266,8 +266,8 @@ if __name__ == '__main__':
         formatted_input.extend(get_formatted_input(bad_input_file, 0, convert_scale=True, use_inner_array=True))
         formatted_ev = None
     else:
-        u'sample_data/default_input.pkl'.format(u'' if default_good_permutations else u'_regular')
-        formatted_input, formatted_ev, formatted_te = pickle.load(open(u'sample_data/default_input.pkl', 'rb'))
+        input_name = u'sample_data/default_input{}.pkl'.format(u'' if default_good_permutations else u'_regular')
+        formatted_input, formatted_ev, formatted_te = pickle.load(open(input_name, 'rb'))
         # formatted_input, formatted_ev, formatted_te = get_default_input(good_permutations=default_good_permutations, multi_class=multi_class)
         if args.shuffle_input:
             print(u'Going to shuffle now.')

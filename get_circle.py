@@ -124,7 +124,7 @@ def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_s
                 fff = Image.new('RGBA', rot.size, (255,) * 4)
                 out = Image.composite(rot, fff, rot)
                 as_array = np.asarray(out.convert(u'L'))
-                yield list(as_array)
+                yield as_array
 
 
 def training_evaluation_test_split(percentages, data):
@@ -207,7 +207,7 @@ if __name__ == '__main__':
             all_adjustments = []
             for idx, bubble in enumerate(bubble_permutation()):
                 adjustments = generate_threshold_adjustments(bubble, 1, 10, 2, rand_range=[255, 256],
-                                                             dark_cut_off=200, num_samples=50)
+                                                             dark_cut_off=200, num_samples=35)
                 print(idx)
                 adjustments = [np.array(a)
                                for adj in adjustments
@@ -215,7 +215,7 @@ if __name__ == '__main__':
                 all_adjustments.extend(adjustments)
             adjustments = all_adjustments
         else:
-            adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 20, 1, rand_range=[255, 256], dark_cut_off=200, rotations=[90, 180, 270])
+            adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 20, 1, rand_range=[255, 256], dark_cut_off=200, rotations=[])
             adjustments = [np.array(a)
                            for adj in adjustments
                            for a in adj]
@@ -235,10 +235,10 @@ if __name__ == '__main__':
             prefix_good = u''
         with open(u'sample_data/{}eval_1_under_30.pkl'.format(prefix_good), 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
-        print(u'finished writing')
+        print(u'finished writing, number: {}'.format(len(adjustments)))
         del adjustments
     if args.default_bad:
-        adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 90, 100, 3, rand_range=[255, 256], dark_cut_off=200)
+        adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 80, 100, 3, rand_range=[255, 256], dark_cut_off=200)
         adjustments = [np.array(a)
                        for adj in adjustments
                        for a in adj]
@@ -255,7 +255,7 @@ if __name__ == '__main__':
         crops = crop(u'images/qr_codes_small.jpg', 30, 30, printing=False)
         qr_codes = []
         for c in crops:
-            as_array = np.asarray(c.convert(u'L'))
+            as_array = np.asarray(c.cr.convert(u'L'))
             qr_codes.append(as_array)
         with open(u'sample_data/qr_codes_small.pkl', 'wb') as circle_output:
             pickle.dump(qr_codes, circle_output)
@@ -263,7 +263,7 @@ if __name__ == '__main__':
         crops = crop(u'images/numbered_list_cropped.jpg', 30, 30, printing=False)
         qr_codes = []
         for c in crops:
-            as_array = np.asarray(c.convert(u'L'))
+            as_array = np.asarray(c.cr.convert(u'L'))
             qr_codes.append(as_array)
         with open(u'sample_data/numbered_list_cropped.pkl', 'wb') as circle_output:
             pickle.dump(qr_codes, circle_output)
@@ -278,8 +278,8 @@ if __name__ == '__main__':
         for _ in range(2000):
             try:
                 c = next(crops)
-                for degrees in range(0, 360, 90):
-                    im2 = c.convert(u'RGBA')
+                for degrees in range(0, 180, 90):
+                    im2 = c.cr.convert(u'RGBA')
                     rot = im2.rotate(degrees)
                     fff = Image.new('RGBA', rot.size, (255,) * 4)
                     out = Image.composite(rot, fff, rot)
@@ -291,8 +291,8 @@ if __name__ == '__main__':
         for _ in range(2000):
             try:
                 c = next(crops)
-                for degrees in range(0, 360, 90):
-                    im2 = c.convert(u'RGBA')
+                for degrees in range(0, 180, 90):
+                    im2 = c.cr.convert(u'RGBA')
                     rot = im2.rotate(degrees)
                     fff = Image.new('RGBA', rot.size, (255,) * 4)
                     out = Image.composite(rot, fff, rot)
@@ -304,8 +304,8 @@ if __name__ == '__main__':
         for _ in range(2000):
             try:
                 c = next(crops)
-                for degrees in range(0, 360, 90):
-                    im2 = c.convert(u'RGBA')
+                for degrees in range(0, 180, 90):
+                    im2 = c.cr.convert(u'RGBA')
                     rot = im2.rotate(degrees)
                     fff = Image.new('RGBA', rot.size, (255,) * 4)
                     out = Image.composite(rot, fff, rot)
@@ -317,8 +317,8 @@ if __name__ == '__main__':
         for _ in range(2000):
             try:
                 c = next(crops)
-                for degrees in range(0, 360, 90):
-                    im2 = c.convert(u'RGBA')
+                for degrees in range(0, 180, 90):
+                    im2 = c.cr.convert(u'RGBA')
                     rot = im2.rotate(degrees)
                     fff = Image.new('RGBA', rot.size, (255,) * 4)
                     out = Image.composite(rot, fff, rot)
@@ -330,8 +330,8 @@ if __name__ == '__main__':
         for _ in range(2000):
             try:
                 c = next(crops)
-                for degrees in range(0, 360, 90):
-                    im2 = c.convert(u'RGBA')
+                for degrees in range(0, 180, 90):
+                    im2 = c.cr.convert(u'RGBA')
                     rot = im2.rotate(degrees)
                     fff = Image.new('RGBA', rot.size, (255,) * 4)
                     out = Image.composite(rot, fff, rot)

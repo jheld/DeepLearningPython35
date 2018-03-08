@@ -1,7 +1,7 @@
 import argparse
 import pickle
 
-from . setup_network import get_default_input
+from setup_network import get_default_input
 
 
 if __name__ == '__main__':
@@ -14,4 +14,4 @@ if __name__ == '__main__':
         if isinstance(args.default_good_permutations, str) else args.default_good_permutations
 
     tr, ev, te = get_default_input(good_permutations=default_good_permutations, multi_class=is_multi_class)
-    pickle.dump(tuple([tr, ev, te]), open(u'sample_data/default_input_regular.pkl', 'wb'))
+    pickle.dump(tuple([tr, ev, te]), open(u'sample_data/default_input{}.pkl'.format(u'' if default_good_permutations else u'_regular'), 'wb'))
