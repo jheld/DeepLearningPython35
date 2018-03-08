@@ -25,7 +25,7 @@ if __name__ == '__main__':
     eval_form_file_name = args.evaluation_form
     eval_form_marked_file_name = args.evaluation_form_marked
     if not eval_form_marked_file_name:
-        eval_form_marked_file_name = eval_form_file_name + u'_marked.jpg'
+        eval_form_marked_file_name = eval_form_file_name + '_' + os.path.basename(args.network_name) + u'_marked.jpg'
     cache_initial_matches = int(args.cache_initial_matches if args.cache_initial_matches != '' else 1) \
         if isinstance(args.cache_initial_matches, str) else int(args.cache_initial_matches)
     cache_parsed_rows = int(args.cache_parsed_rows if args.cache_parsed_rows != '' else 1) \
