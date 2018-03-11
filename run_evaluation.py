@@ -13,7 +13,7 @@ from setup_network import find_per_row, get_rows, find_similar_item_get_best, dr
 from PIL import ImageDraw
 
 
-def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, cache_initial_matches, cache_parsed_rows):
+def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, cache_initial_matches, cache_parsed_rows, parse_threshold=0.9, save=True):
     net = network2.load(network_name)
     if not eval_form_marked_file_name:
         eval_form_marked_file_name = eval_form_file_name + '_' + os.path.basename(network_name) + u'_marked.jpg'
@@ -25,7 +25,7 @@ def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_
     if full_matches is None:
         full_crops = net_crops_that_are_good(eval_form_file_name, net, 30, 30, printing=False)
         full_matches = list(full_crops)
-        if cache_initial_matches:
+        if cache_initial_matches and save:
             pickle.dump(full_matches,
                         open(eval_form_file_name + '_' + os.path.basename(network_name) + u'_initial_matches', 'wb'))
     parsed_rows = None
@@ -36,15 +36,16 @@ def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_
                 open(parsed_rows_file_name, 'rb'))
     if parsed_rows is None:
         s_fm = sorted(full_matches, key=lambda x: x.result[1][0])
-        better_fm = get_better(s_fm, net, threshold=0.9)
+        better_fm = get_better(s_fm, net, threshold=parse_threshold)
         rows = get_rows(better_fm)
         parsed_rows = list(rows)
-        if cache_parsed_rows:
+        if cache_parsed_rows and save:
             pickle.dump(parsed_rows,
                         open(parsed_rows_file_name, 'wb'))
     eval_image = Image.open(evaluation_form)
     eval_image = draw_hits(parsed_rows, eval_image)
-    eval_image.convert(u'RGB').save(eval_form_marked_file_name)
+    if save:
+        eval_image.convert(u'RGB').save(eval_form_marked_file_name)
     return eval_form_marked_file_name, parsed_rows, parsed_rows_file_name
 
 
@@ -57,7 +58,17 @@ def get_input_vars(args):
         if isinstance(args.cache_initial_matches, str) else int(args.cache_initial_matches)
     cache_parsed_rows = int(args.cache_parsed_rows if args.cache_parsed_rows != '' else 1) \
         if isinstance(args.cache_parsed_rows, str) else int(args.cache_parsed_rows)
-    return network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, cache_initial_matches, cache_parsed_rows
+    if args.save == '':
+        save = True
+    else:
+        save = bool(int(args.save))
+    parse_threshold = args.parse_threshold
+    if parse_threshold == '':
+        parse_threshold = 0.9
+    else:
+        parse_threshold = float(parse_threshold)
+    return network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, \
+           cache_initial_matches, cache_parsed_rows, parse_threshold, save
 
 
 if __name__ == '__main__':
@@ -67,6 +78,8 @@ if __name__ == '__main__':
     a_p.add_argument(u'--evaluation_form_marked', type=str)
     a_p.add_argument(u'--cache_initial_matches', type=int, default=1)
     a_p.add_argument(u'--cache_parsed_rows', type=int, default=1)
+    a_p.add_argument(u'--parse_threshold', type=float, default=0.9)
+    a_p.add_argument(u'--save', type=int, default=1)
 
     args = a_p.parse_args()
 
