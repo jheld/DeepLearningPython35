@@ -1,6 +1,7 @@
 import os
+from concurrent.futures import ProcessPoolExecutor
 
-from setup_network import crop, net_parse_crops, net_crops_that_are_good
+from setup_network import crop_sliding_window, net_parse_crops, net_crops_that_are_good
 import network2
 import pickle
 import argparse
@@ -12,7 +13,7 @@ from setup_network import find_per_row, get_rows, find_similar_item_get_best, dr
 from PIL import ImageDraw
 
 
-def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, cache_initial_matches, cache_parsed_rows, parallel=True):
+def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, cache_initial_matches, cache_parsed_rows):
     net = network2.load(network_name)
     if not eval_form_marked_file_name:
         eval_form_marked_file_name = eval_form_file_name + '_' + os.path.basename(network_name) + u'_marked.jpg'
@@ -35,7 +36,7 @@ def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_
                 open(parsed_rows_file_name, 'rb'))
     if parsed_rows is None:
         s_fm = sorted(full_matches, key=lambda x: x.result[1][0])
-        better_fm = get_better(s_fm, net)
+        better_fm = get_better(s_fm, net, threshold=0.9)
         rows = get_rows(better_fm)
         parsed_rows = list(rows)
         if cache_parsed_rows:

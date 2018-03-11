@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw
 from future.builtins import open, str
 
 import network2
-from get_circle import pixels_from_circle, training_evaluation_test_split, crop, generate_threshold_adjustments, \
+from get_circle import pixels_from_circle, training_evaluation_test_split, crop_sliding_window, generate_threshold_adjustments, \
     crop_list, CropResult
 
 
@@ -138,7 +138,7 @@ def parse_crops(crops, sDA):
         yield ParseCropResultSDA(idx, cr, y, dc_formatted_cr, result)
 
 
-def get_better(s_fm, net_proc):
+def get_better(s_fm: list, net_proc: network2.Network, threshold: float=0.9) -> list:
     better_fm = []
     for f_idx, fm in enumerate(s_fm):
         count = 0
@@ -147,7 +147,7 @@ def get_better(s_fm, net_proc):
             r = net_proc.feedforward(np.array([1 - i / 255
                                                for i in np.array(make_rotation(fm.cr_res.cr, idx))]
                                               ).reshape(fm.cr_res.cr.size[0] * fm.cr_res.cr.size[1], 1))
-            if r[1][0] >= 0.9:
+            if r[1][0] >= threshold:
                 count += 1
         if count == max_matches:
             better_fm.append((f_idx, fm))
@@ -167,11 +167,11 @@ def draw_hits(parsed_rows, source_image):
 
 
 def make_rotation(cr_img, rotation):
-   im2 = cr_img.convert(u'RGBA')
-   rot = im2.rotate(rotation)
-   fff = Image.new('RGBA', rot.size, (255,) * 4)
-   out = Image.composite(rot, fff, rot)
-   return out.convert(u'L')
+    im2 = cr_img.convert(u'RGBA')
+    rot = im2.rotate(rotation)
+    fff = Image.new('RGBA', rot.size, (255,) * 4)
+    out = Image.composite(rot, fff, rot)
+    return out.convert(u'L')
 
 
 def get_rows(items, x_threshold=15, y_threshold=15):
@@ -181,7 +181,8 @@ def get_rows(items, x_threshold=15, y_threshold=15):
         if prev_start == 0:
             prev_start = target_item[1].cr_res.box[2]
         if prev_start - y_threshold <= target_item[1].cr_res.box[2]:
-            yield find_per_row(sorted_by_y_start, target_item[1].cr_res.box[2], x_threshold=x_threshold, y_threshold=y_threshold)
+            yield find_per_row(sorted_by_y_start, target_item[1].cr_res.box[2],
+                               x_threshold=x_threshold, y_threshold=y_threshold)
             prev_start = target_item[1].cr_res.box[3] + 5
 
 
@@ -194,7 +195,8 @@ def find_per_row(items, y_start, x_threshold=15, y_threshold=15):
             if prev_start == 0:
                 prev_start = target_item[1].cr_res.box[0]
             if prev_start <= target_item[1].cr_res.box[0]:
-                best = find_similar_item_get_best(target_item, items, x_threshold=x_threshold, y_threshold=y_threshold)
+                best = find_similar_item_get_best(target_item, items,
+                                                  x_threshold=x_threshold, y_threshold=y_threshold)
                 # found the best match against this item (row's slot x), so we don't want to look at another
                 # unless it is past the end of this one's slot by some appropriate margin (this one's end + 5)
                 prev_start = best[1].cr_res.box[1] + 5
@@ -223,19 +225,21 @@ def net_parse_crops(crops: CropResult, net_proc: network2.Network):
         yield ParseCropResult(idx, cr_res, y, result)
 
 
-def net_crops_that_are_good(source_file_path, net_proc, height=30, width=30, multi_class=True, printing=True):
-    crops = crop(source_file_path, height, width, printing=printing)
+def net_crops_that_are_good(source_file_path, net_proc, height=30, width=30,
+                            multi_class=True, printing=True, crops=None, threshold=0.9):
+    if crops is None:
+        crops = crop_sliding_window(source_file_path, height, width, printing=printing)
     pcs = net_parse_crops(crops, net_proc)
     full_size = height * width
     res_idx = 1 if multi_class else 0
     for pc in pcs:
-        if pc.result[res_idx][0] >= 0.9:
+        if pc.result[res_idx][0] >= threshold:
             if printing:
                 print(pc.result, pc.result[res_idx][0])
             if len([1 for idx in range(1, 4)
                     if net_proc.feedforward(np.array([1 - i / 255
                                                       for i in np.array(pc.cr_res.cr.rotate(90 * idx))]
-                                                     ).reshape(full_size, 1))[1][0] >= 0.9]) >= 2:
+                                                     ).reshape(full_size, 1))[1][0] >= threshold]) >= 2:
                 yield pc
 
 
@@ -257,7 +261,9 @@ if __name__ == '__main__':
     is_multi_class = bool(int(args.binary_classifier))
     formatted_te = []
     hidden_nodes = list(map(int, args.hidden_nodes.split(u',')))
-    default_good_permutations = int(args.default_good_permutations) if isinstance(args.default_good_permutations, str) else args.default_good_permutations
+    default_good_permutations = int(args.default_good_permutations) \
+        if isinstance(args.default_good_permutations, str) \
+        else args.default_good_permutations
     if not args.default_input:
         # note, there is no eval and test input support here, yet.
         good_input_file = args.good_input_file_name

@@ -7,7 +7,7 @@ import network2
 from DenoisingAutoEncoder.DenoisingAutoEncoder import utils
 from DenoisingAutoEncoder.DenoisingAutoEncoder.SDA_layers import StackedDA
 
-from get_circle import training_evaluation_test_split, crop
+from get_circle import training_evaluation_test_split, crop_sliding_window
 
 from setup_network import get_formatted_input, get_formatted_input_not_training, parse_crops
 
@@ -107,7 +107,7 @@ def sda_attempt(noise_rate=0.3, pre_train_epoch=1, final_epoch=2, fine_tune_epoc
 
 
 def crops_that_are_good(source_file_path, sDA, multi_class=True):
-    crops = crop(source_file_path, 30, 30)
+    crops = crop_sliding_window(source_file_path, 30, 30)
     pcs = parse_crops(crops, sDA)
     m_index = 1 if multi_class else 0
     for pc in pcs:

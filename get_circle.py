@@ -34,7 +34,7 @@ def pixels_from_circle(circle_data, regular_array=True):
 CropResult = namedtuple(u'CropResult', [u'box', u'cr'])
 
 
-def crop(file_path, height, width, printing=True):
+def crop_sliding_window(file_path, height, width, printing=True):
     im = Image.open(file_path)
     im = im.convert(u'L')
     imgwidth, imgheight = im.size
@@ -252,7 +252,7 @@ if __name__ == '__main__':
         with open(u'sample_data/eval_half_right.pkl', 'wb') as circle_output:
             pickle.dump([half_right], circle_output)
 
-        crops = crop(u'images/qr_codes_small.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'images/qr_codes_small.jpg', 30, 30, printing=False)
         qr_codes = []
         for c in crops:
             as_array = np.asarray(c.cr.convert(u'L'))
@@ -260,7 +260,7 @@ if __name__ == '__main__':
         with open(u'sample_data/qr_codes_small.pkl', 'wb') as circle_output:
             pickle.dump(qr_codes, circle_output)
 
-        crops = crop(u'images/numbered_list_cropped.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'images/numbered_list_cropped.jpg', 30, 30, printing=False)
         qr_codes = []
         for c in crops:
             as_array = np.asarray(c.cr.convert(u'L'))
@@ -274,7 +274,7 @@ if __name__ == '__main__':
         #     c = next(crops)
         #     as_array = np.asarray(c.convert(u'L'))
         #     ipsums.append(as_array.reshape(as_array.size))
-        crops = crop(u'sample_data/thesis_lorem_ipsum_9.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'sample_data/thesis_lorem_ipsum_9.jpg', 30, 30, printing=False)
         for _ in range(2000):
             try:
                 c = next(crops)
@@ -287,7 +287,7 @@ if __name__ == '__main__':
                     ipsums.append(as_array)
             except StopIteration:
                 break
-        crops = crop(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', 30, 30, printing=False)
         for _ in range(2000):
             try:
                 c = next(crops)
@@ -300,7 +300,7 @@ if __name__ == '__main__':
                     ipsums.append(as_array)
             except StopIteration:
                 break
-        crops = crop(u'images/thesis_lorem_ipsum_9_2_line_cropped.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_9_2_line_cropped.jpg', 30, 30, printing=False)
         for _ in range(2000):
             try:
                 c = next(crops)
@@ -313,7 +313,7 @@ if __name__ == '__main__':
                     ipsums.append(as_array)
             except StopIteration:
                 break
-        crops = crop(u'images/thesis_lorem_ipsum_7_2_line.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_7_2_line.jpg', 30, 30, printing=False)
         for _ in range(2000):
             try:
                 c = next(crops)
@@ -326,7 +326,7 @@ if __name__ == '__main__':
                     ipsums.append(as_array)
             except StopIteration:
                 break
-        crops = crop(u'images/thesis_lorem_ipsum_7.5_2_line.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_7.5_2_line.jpg', 30, 30, printing=False)
         for _ in range(2000):
             try:
                 c = next(crops)
