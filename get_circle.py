@@ -175,7 +175,7 @@ def bubble_permutation():
     im = im.convert(u'L')
     for i in range(130, 141, 1):
         for j in range(113, 126, 1):
-            yield np.asarray(im.crop((i, j, i+30, j+30))).reshape(900)
+            yield im.crop((i, j, i+30, j+30))
 
 
 def bubble_permutation_0():
@@ -184,6 +184,14 @@ def bubble_permutation_0():
     for i in range(130, 141, 1):
         for j in range(113, 126, 1):
             yield np.asarray(im.crop((i, j, i+30, j+30))).reshape(900)
+
+
+def scale_image(cr_img, scale_size):
+    im2 = cr_img.convert(u'RGBA')
+    im2.thumbnail(scale_size)
+    fff = Image.new('RGBA', (30, 30), (255,) * 4)
+    out = Image.composite(im2, fff, im2)
+    return out.convert(u'L')
 
 
 if __name__ == '__main__':
@@ -199,23 +207,39 @@ if __name__ == '__main__':
     a_p.add_argument(u'--default_ipsum', default=0)
     a_p.add_argument(u'--shuffle_samples', default=0)
     a_p.add_argument(u'--default_good_permutations', default=0)
+    a_p.add_argument(u'--enable_scaling', default=0)
     args = a_p.parse_args()
     default_good_permutations = int(args.default_good_permutations) if isinstance(args.default_good_permutations, str) else args.default_good_permutations
+    enable_scaling = int(args.enable_scaling) if isinstance(args.enable_scaling, str) else args.enable_scaling
     if args.default_good:
         if default_good_permutations:
             print(u'using default good permutations')
             all_adjustments = []
+            num_samples = 35
+            if enable_scaling:
+                num_samples = 14
             for idx, bubble in enumerate(bubble_permutation()):
-                adjustments = generate_threshold_adjustments(bubble, 1, 10, 2, rand_range=[255, 256],
-                                                             dark_cut_off=200, num_samples=35)
+                adjustments = generate_threshold_adjustments(np.array(bubble).reshape(900), 1, 10, 2, rand_range=[255, 256],
+                                                             dark_cut_off=200, num_samples=num_samples)
                 print(idx)
                 adjustments = [np.array(a)
                                for adj in adjustments
                                for a in adj]
                 all_adjustments.extend(adjustments)
+                if enable_scaling:
+                    copy_of_bubble = Image.new(u'L', (30, 30))
+                    copy_of_bubble.paste(bubble)
+                    scale_bubble = scale_image(copy_of_bubble, (25, 25))
+                    scale_adjustments = generate_threshold_adjustments(np.array(scale_bubble).reshape(900), 1, 10, 2, rand_range=[255, 256],
+                                                                       dark_cut_off=200, num_samples=num_samples)
+                    scale_adjustments = [np.array(a)
+                                         for adj in scale_adjustments
+                                         for a in adj]
+                    all_adjustments.extend(scale_adjustments)
+
             adjustments = all_adjustments
         else:
-            adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 20, 1, rand_range=[255, 256], dark_cut_off=200, rotations=[])
+            adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 20, 1, rand_range=[255, 256], dark_cut_off=200, rotations=[], scale=(22, 22))
             adjustments = [np.array(a)
                            for adj in adjustments
                            for a in adj]
