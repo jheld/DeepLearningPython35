@@ -6,7 +6,7 @@ import random
 from collections import namedtuple
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 from future.builtins import str, open, range
 
@@ -35,14 +35,22 @@ CropResult = namedtuple(u'CropResult', [u'box', u'cr'])
 
 
 def crop_sliding_window(file_path, height, width, printing=True):
+    """
+
+    :param file_path:
+    :param height:
+    :param width:
+    :param printing:
+    :return:
+    """
     im = Image.open(file_path)
     im = im.convert(u'L')
-    imgwidth, imgheight = im.size
+    img_width, img_height = im.size
     # slide a window across the image
-    for y in range(0, imgheight, 1):
-        for x in range(0, imgwidth, 1):
+    for y in range(0, img_height, 1):
+        for x in range(0, img_width, 1):
             # yield the current window
-            if y + height < imgheight and x + width < imgwidth:
+            if y + height < img_height and x + width < img_width:
                 if printing:
                     print(x, x + width, y, y + height)
                 yield CropResult((x, x + width, y, y + height), im.crop((x, y, x + width, y + height)))
@@ -170,28 +178,31 @@ def generate_threshold_adjustments(circle_data, threshold_start, threshold_end, 
         yield adjust_from_circle(circle_data, random_threshold=threshold / 100, **kwargs)
 
 
-def bubble_permutation():
-    im = Image.open(u'images/thesis_circles.jpg')
+def bubble_permutation(file_path=u'images/thesis_circles.jpg'):
+    """
+
+    :return:
+    """
+    im = Image.open(file_path)
     im = im.convert(u'L')
     for i in range(130, 141, 1):
         for j in range(113, 126, 1):
-            yield im.crop((i, j, i+30, j+30))
-
-
-def bubble_permutation_0():
-    im = Image.open(u'images/eval-0_circle.jpg')
-    im = im.convert(u'L')
-    for i in range(130, 141, 1):
-        for j in range(113, 126, 1):
-            yield np.asarray(im.crop((i, j, i+30, j+30))).reshape(900)
+            yield im.crop((i, j, i+30, j+30)).filter(ImageFilter.UnsharpMask(percent=1700, threshold=0))
+            # yield im.crop((i, j, i+30, j+30)).filter(ImageFilter.SMOOTH)
 
 
 def scale_image(cr_img, scale_size):
-    im2 = cr_img.convert(u'RGBA')
-    im2.thumbnail(scale_size)
-    fff = Image.new('RGBA', (30, 30), (255,) * 4)
-    out = Image.composite(im2, fff, im2)
-    return out.convert(u'L')
+    """
+    Given an image, scale it to the given scale size.
+    :param cr_img:
+    :param scale_size:
+    :return:
+    """
+    im_rgba = cr_img.convert(u'RGBA')
+    im_rgba.thumbnail(scale_size)
+    light_output = Image.new('RGBA', (30, 30), (255,) * 4)
+    scaled = Image.composite(im2, light_output, im2)
+    return scaled.convert(u'L')
 
 
 if __name__ == '__main__':

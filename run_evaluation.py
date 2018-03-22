@@ -14,6 +14,18 @@ from PIL import ImageDraw
 
 
 def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, cache_initial_matches, cache_parsed_rows, parse_threshold=0.9, save=True):
+    """
+
+    :param network_name:
+    :param eval_form_file_name:
+    :param evaluation_form:
+    :param eval_form_marked_file_name:
+    :param cache_initial_matches:
+    :param cache_parsed_rows:
+    :param parse_threshold:
+    :param save:
+    :return:
+    """
     net = network2.load(network_name)
     if not eval_form_marked_file_name:
         eval_form_marked_file_name = eval_form_file_name + '_' + os.path.basename(network_name) + u'_marked.jpg'
@@ -49,20 +61,25 @@ def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_
     return eval_form_marked_file_name, parsed_rows, parsed_rows_file_name
 
 
-def get_input_vars(args):
-    network_name = args.network_name
-    eval_form_file_name = args.evaluation_form
-    evaluation_form = args.evaluation_form
-    eval_form_marked_file_name = args.evaluation_form_marked
-    cache_initial_matches = int(args.cache_initial_matches if args.cache_initial_matches != '' else 1) \
-        if isinstance(args.cache_initial_matches, str) else int(args.cache_initial_matches)
-    cache_parsed_rows = int(args.cache_parsed_rows if args.cache_parsed_rows != '' else 1) \
-        if isinstance(args.cache_parsed_rows, str) else int(args.cache_parsed_rows)
-    if args.save == '':
+def get_input_vars(input_args):
+    """
+
+    :param input_args:
+    :return:
+    """
+    network_name = input_args.network_name
+    eval_form_file_name = input_args.evaluation_form
+    evaluation_form = input_args.evaluation_form
+    eval_form_marked_file_name = input_args.evaluation_form_marked
+    cache_initial_matches = int(input_args.cache_initial_matches if input_args.cache_initial_matches != '' else 1) \
+        if isinstance(input_args.cache_initial_matches, str) else int(input_args.cache_initial_matches)
+    cache_parsed_rows = int(input_args.cache_parsed_rows if input_args.cache_parsed_rows != '' else 1) \
+        if isinstance(input_args.cache_parsed_rows, str) else int(input_args.cache_parsed_rows)
+    if input_args.save == '':
         save = True
     else:
-        save = bool(int(args.save))
-    parse_threshold = args.parse_threshold
+        save = bool(int(input_args.save))
+    parse_threshold = input_args.parse_threshold
     if parse_threshold == '':
         parse_threshold = 0.9
     else:
