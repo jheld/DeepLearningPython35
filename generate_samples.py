@@ -316,6 +316,7 @@ if __name__ == '__main__':
         for c in crops:
             as_array = np.asarray(c.cr.convert(u'L'))
             qr_codes.append(as_array)
+        print('Number of QR code: {}'.format(len(qr_codes)))
         with open(u'sample_data/qr_codes_small.pkl', 'wb') as circle_output:
             pickle.dump(qr_codes, circle_output)
 
