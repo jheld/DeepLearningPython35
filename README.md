@@ -16,13 +16,16 @@ In test.py there are examples of networks configurations with proper comments. I
 ## Bubble classification specifics
 Please run the following command to setup the samples for the network to be built against:
 
-```python get_circle.py eval_circle.pkl eval_ninety_samples.pkl --random_threshold=0.9 --rand_range 255 256 --dark_cut_off=150 --num_samples=1000 --default_good=1 --default_bad=1 --default_ipsum=1 --default_good_permutations=0 --shuffle_samples=1```
+```python generate_samples.py --default_good=1 --default_bad=1 --default_ipsum=1 --default_good_permutations=0 --shuffle_samples=1 --x_size=23 --y_size=23```
 
 Please run the following command to compile the samples to the correct format:
 
-```python generate_samples.py```
+```python format_samples.py --default_good_permutations=1```
 
 
 Please run the following command (using any specific hyper-parameters you wish):
 
-```python setup_network.py 40 40 --default_input=1 --monitor_training=1 --eta=0.01 --lmbda=0.0 --binary_classifier=1 --shuffle_input=1 --default_good_permutations=0 --early_stopping_n=5```
+```python setup_network.py 30 30 --default_input=1 --monitor_training=1 --eta=0.84 --lmbda=0.0 --binary_classifier=1 --shuffle_input=1 --default_good_permutations=1 --early_stopping_n=5 --x_size=23 --y_size=23```
+
+To run the network on a given image:
+```python run_evaluation.py network_name image_file_name```

@@ -43,7 +43,7 @@ import theano
 import theano.tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
-from get_circle import training_evaluation_test_split
+from generate_samples import training_evaluation_test_split
 from logistic_sgd import LogisticRegression, load_data
 from mlp import HiddenLayer
 from dA import dA

@@ -7,7 +7,7 @@ import network2
 from DenoisingAutoEncoder.DenoisingAutoEncoder import utils
 from DenoisingAutoEncoder.DenoisingAutoEncoder.SDA_layers import StackedDA
 
-from get_circle import training_evaluation_test_split, crop_sliding_window
+from generate_samples import training_evaluation_test_split, crop_sliding_window
 
 from setup_network import get_formatted_input, get_formatted_input_not_training, parse_crops
 

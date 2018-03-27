@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw
 from future.builtins import open, str
 
 import network2
-from get_circle import pixels_from_circle, training_evaluation_test_split, crop_sliding_window, generate_threshold_adjustments, \
+from generate_samples import pixels_from_circle, training_evaluation_test_split, crop_sliding_window, generate_threshold_adjustments, \
     crop_list, CropResult
 
 
