@@ -13,7 +13,7 @@ from setup_network import find_per_row, get_rows, find_similar_item_get_best, dr
 from PIL import ImageDraw
 
 
-def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, cache_initial_matches, cache_parsed_rows, parse_threshold=0.9, save=True):
+def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, cache_initial_matches, cache_parsed_rows, parse_threshold=0.9, save=True, x_size=30, y_size=30):
     """
 
     :param network_name:
@@ -24,6 +24,8 @@ def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_
     :param cache_parsed_rows:
     :param parse_threshold:
     :param save:
+    :param x_size:
+    :param y_size:
     :return:
     """
     net = network2.load(network_name)
@@ -35,7 +37,7 @@ def run_it(network_name, eval_form_file_name, evaluation_form, eval_form_marked_
             full_matches = pickle.load(
                 open(eval_form_file_name + '_' + os.path.basename(network_name) + u'_initial_matches', 'rb'))
     if full_matches is None:
-        full_crops = net_crops_that_are_good(eval_form_file_name, net, 30, 30, printing=False)
+        full_crops = net_crops_that_are_good(eval_form_file_name, net, y_size, x_size, printing=False)
         full_matches = list(full_crops)
         if cache_initial_matches and save:
             pickle.dump(full_matches,
@@ -84,8 +86,10 @@ def get_input_vars(input_args):
         parse_threshold = 0.9
     else:
         parse_threshold = float(parse_threshold)
+    x_size = int(input_args.x_size)
+    y_size = int(input_args.y_size)
     return network_name, eval_form_file_name, evaluation_form, eval_form_marked_file_name, \
-           cache_initial_matches, cache_parsed_rows, parse_threshold, save
+           cache_initial_matches, cache_parsed_rows, parse_threshold, save, x_size, y_size
 
 
 if __name__ == '__main__':
@@ -97,6 +101,8 @@ if __name__ == '__main__':
     a_p.add_argument(u'--cache_parsed_rows', type=int, default=1)
     a_p.add_argument(u'--parse_threshold', type=float, default=0.9)
     a_p.add_argument(u'--save', type=int, default=1)
+    a_p.add_argument(u'--x_size', type=int, default=30)
+    a_p.add_argument(u'--y_size', type=int, default=30)
 
     args = a_p.parse_args()
 

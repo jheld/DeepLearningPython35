@@ -19,6 +19,7 @@ from get_circle import pixels_from_circle, training_evaluation_test_split, crop_
 
 def get_default_input(good_permutations=True, multi_class=True):
     tr_good, ev_good, te_good = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/{}eval_1_under_30.pkl'.format(u'permutations_' if good_permutations else u''))
+    correct_size = len(tr_good[0])
     tr_bad, ev_bad, te_bad = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/eval_90_under_100.pkl')
     tr_ipsum, ev_ipsum, te_ipsum = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/lorem_ipsum_generated.pkl')
     tr_qr, ev_qr, te_qr = training_evaluation_test_split((0.7, 0.15, 0.15), u'sample_data/qr_codes_small.pkl')
@@ -33,17 +34,17 @@ def get_default_input(good_permutations=True, multi_class=True):
     ev_bad.extend(ev_numbered)
     te_bad.extend(te_numbered)
     training = []
-    with open(u'sample_data/eval_half_right.pkl', 'rb') as circle_input:
-        half_right_circles = pickle.load(circle_input)
-        tr_bad.extend(half_right_circles)
-    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), np.array([np.array([0]), np.array([1])])]) for item in tr_good])
-    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), np.array([np.array([1]), np.array([0])])]) for item in tr_bad])
+    # with open(u'sample_data/eval_half_right.pkl', 'rb') as circle_input:
+    #     half_right_circles = pickle.load(circle_input)
+    #     tr_bad.extend(half_right_circles)
+    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(correct_size, 1), np.array([np.array([0]), np.array([1])])]) for item in tr_good])
+    training.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(correct_size, 1), np.array([np.array([1]), np.array([0])])]) for item in tr_bad])
     evaluation = []
-    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), 1]) for item in ev_good])
-    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), 0]) for item in ev_bad])
+    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(correct_size, 1), 1]) for item in ev_good])
+    evaluation.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(correct_size, 1), 0]) for item in ev_bad])
     testing = []
-    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), 1]) for item in te_good])
-    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(900, 1), 0]) for item in te_bad])
+    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(correct_size, 1), 1]) for item in te_good])
+    testing.extend([tuple([np.array([np.array([1 - i/255, ]) for i in item]).reshape(correct_size, 1), 0]) for item in te_bad])
     return training, evaluation, testing
 
 
@@ -257,7 +258,11 @@ if __name__ == '__main__':
     a_p.add_argument('--early_stopping_n', default=0, type=int)
     a_p.add_argument(u'--default_good_permutations', default=False)
     a_p.add_argument(u'--binary_classifier', default=1)
+    a_p.add_argument(u'--x_size', type=int, default=30)
+    a_p.add_argument(u'--y_size', type=int, default=30)
     args = a_p.parse_args()
+    x_size = int(args.x_size)
+    y_size = int(args.y_size)
     is_multi_class = bool(int(args.binary_classifier))
     formatted_te = []
     hidden_nodes = list(map(int, args.hidden_nodes.split(u',')))
@@ -280,7 +285,7 @@ if __name__ == '__main__':
             random.shuffle(formatted_input)
             random.shuffle(formatted_ev)
     # consider using the len of the first formatted input's value as the size, instead of being CLI-based.
-    net = network2.Network([900, *hidden_nodes, 2 if is_multi_class else 1])
+    net = network2.Network([x_size*y_size, *hidden_nodes, 2 if is_multi_class else 1])
     eta = float(args.eta)
     lmbda = float(args.lmbda)
     print(u'eta: {eta}, lmbda: {lmbda}'.format(eta=eta, lmbda=lmbda))

@@ -89,7 +89,7 @@ def save_image_as_jpg(circle_data, output_file_name):
     Image.fromarray(circle_data).save(output_file_name)
 
 
-def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_samples=1000, dark_cut_off=30, rotations=None):
+def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_samples=1000, dark_cut_off=30, rotations=None, x_size=30, y_size=30):
     """
 
     :param circle_data:
@@ -97,6 +97,9 @@ def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_s
     :param rand_range:
     :param num_samples:
     :param dark_cut_off:
+    :param rotations:
+    :param x_size:
+    :param y_size:
     :return:
     """
     if not rand_range:
@@ -125,7 +128,7 @@ def adjust_from_circle(circle_data, random_threshold=0.1, rand_range=None, num_s
                           for item in circle_data]
         yield new_adjustment
         if rotations:
-            adj_img = Image.fromarray(np.array(new_adjustment).reshape(30, 30))
+            adj_img = Image.fromarray(np.array(new_adjustment).reshape(x_size, y_size))
             for rotation in rotations:
                 im2 = adj_img.convert(u'RGBA')
                 rot = im2.rotate(rotation)
@@ -178,29 +181,39 @@ def generate_threshold_adjustments(circle_data, threshold_start, threshold_end, 
         yield adjust_from_circle(circle_data, random_threshold=threshold / 100, **kwargs)
 
 
-def bubble_permutation(file_path=u'images/thesis_circles.jpg'):
+def bubble_permutation(file_path=u'images/thesis_circles.jpg', start_x=130, end_x=141, start_y=113, end_y=126, x_size=30, y_size=30):
     """
 
+    :param file_path:
+    :param start_x:
+    :param end_x:
+    :param start_y:
+    :param end_y:
+    :param x_size:
+    :param y_size:
     :return:
     """
     im = Image.open(file_path)
     im = im.convert(u'L')
-    for i in range(130, 141, 1):
-        for j in range(113, 126, 1):
-            yield im.crop((i, j, i+30, j+30)).filter(ImageFilter.UnsharpMask(percent=1700, threshold=0))
-            # yield im.crop((i, j, i+30, j+30)).filter(ImageFilter.SMOOTH)
+    for i in range(start_x, end_x, 1):
+        for j in range(start_y, end_y, 1):
+            # im.crop((i, j, i + x_size, j + y_size)).show()
+            yield im.crop((i, j, i+x_size, j+y_size)).filter(ImageFilter.UnsharpMask(percent=1700, threshold=0))
+            yield im.crop((i, j, i+x_size, j+y_size))
 
 
-def scale_image(cr_img, scale_size):
+def scale_image(cr_img, scale_size, x_size=30, y_size=30):
     """
     Given an image, scale it to the given scale size.
     :param cr_img:
     :param scale_size:
+    :param x_size:
+    :param y_size:
     :return:
     """
     im_rgba = cr_img.convert(u'RGBA')
     im_rgba.thumbnail(scale_size)
-    light_output = Image.new('RGBA', (30, 30), (255,) * 4)
+    light_output = Image.new('RGBA', (x_size, y_size), (255,) * 4)
     scaled = Image.composite(im2, light_output, im2)
     return scaled.convert(u'L')
 
@@ -219,7 +232,11 @@ if __name__ == '__main__':
     a_p.add_argument(u'--shuffle_samples', default=0)
     a_p.add_argument(u'--default_good_permutations', default=0)
     a_p.add_argument(u'--enable_scaling', default=0)
+    a_p.add_argument(u'--x_size', type=int, default=30)
+    a_p.add_argument(u'--y_size', type=int, default=30)
     args = a_p.parse_args()
+    x_size = int(args.x_size)
+    y_size = int(args.y_size)
     default_good_permutations = int(args.default_good_permutations) if isinstance(args.default_good_permutations, str) else args.default_good_permutations
     enable_scaling = int(args.enable_scaling) if isinstance(args.enable_scaling, str) else args.enable_scaling
     if args.default_good:
@@ -228,9 +245,15 @@ if __name__ == '__main__':
             all_adjustments = []
             num_samples = 35
             if enable_scaling:
-                num_samples = 14
-            for idx, bubble in enumerate(bubble_permutation()):
-                adjustments = generate_threshold_adjustments(np.array(bubble).reshape(900), 1, 10, 2, rand_range=[255, 256],
+                num_samples = 62
+            # input_file = '/home/jason/box/from copy/Downloads/swami/eval/s18-cs411-1_only.jpg'
+            input_file = '/home/jason/box/From_BrotherDevice/20160102123552_001.jpg'
+            # input_file = u'images/thesis_circles.jpg'
+            # permutation_bounds = dict(start_x = 79, end_x = 93, start_y = 57, end_y = 70)
+            permutation_bounds = dict(start_x = 117, end_x = 124, start_y = 80, end_y = 88)
+            for idx, bubble in enumerate(bubble_permutation(input_file, x_size=x_size, y_size=y_size, **permutation_bounds)):
+                # bubble.show()
+                adjustments = generate_threshold_adjustments(np.array(bubble).reshape(x_size*y_size), 1, 10, 2, rand_range=[230, 256],
                                                              dark_cut_off=200, num_samples=num_samples)
                 print(idx)
                 adjustments = [np.array(a)
@@ -238,11 +261,11 @@ if __name__ == '__main__':
                                for a in adj]
                 all_adjustments.extend(adjustments)
                 if enable_scaling:
-                    copy_of_bubble = Image.new(u'L', (30, 30))
+                    copy_of_bubble = Image.new(u'L', (x_size, y_size))
                     copy_of_bubble.paste(bubble)
                     scale_bubble = scale_image(copy_of_bubble, (25, 25))
-                    scale_adjustments = generate_threshold_adjustments(np.array(scale_bubble).reshape(900), 1, 10, 2, rand_range=[255, 256],
-                                                                       dark_cut_off=200, num_samples=num_samples)
+                    scale_adjustments = generate_threshold_adjustments(np.array(scale_bubble).reshape(x_size*y_size), 1, 10, 2, rand_range=[255, 256],
+                                                                       dark_cut_off=200, num_samples=num_samples, x_size=x_size, y_size=y_size)
                     scale_adjustments = [np.array(a)
                                          for adj in scale_adjustments
                                          for a in adj]
@@ -250,11 +273,13 @@ if __name__ == '__main__':
 
             adjustments = all_adjustments
         else:
-            adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 1, 20, 1, rand_range=[255, 256], dark_cut_off=200, rotations=[], scale=(22, 22))
+            # one_circle_path = 'images/eval_circle.jpg'
+            one_circle_path = '/home/jason/box/From_BrotherDevice/20160102123552_001_single.jpg'
+            adjustments = generate_threshold_adjustments(one_circle_path, 1, 20, 1, rand_range=[230, 256], dark_cut_off=200, rotations=[], x_size=x_size, y_size=y_size)
             adjustments = [np.array(a)
                            for adj in adjustments
                            for a in adj]
-            adjustments.append(np.array(Image.open(u'images/eval_circle.jpg').convert(u'L')).reshape(900))
+            adjustments.append(np.array(Image.open(one_circle_path).convert(u'L')).reshape(x_size * y_size))
         # im = Image.open(u'images/thesis_circles.jpg')
         # im = im.convert(u'L')
         # for i in range(130, 141, 1):
@@ -273,21 +298,23 @@ if __name__ == '__main__':
         print(u'finished writing, number: {}'.format(len(adjustments)))
         del adjustments
     if args.default_bad:
-        adjustments = generate_threshold_adjustments(u'images/eval_circle.jpg', 80, 100, 3, rand_range=[255, 256], dark_cut_off=200)
+        one_circle_path = 'images/eval_circle.jpg'
+        one_circle_path = '/home/jason/box/From_BrotherDevice/20160102123552_001_single.jpg'
+        adjustments = generate_threshold_adjustments(one_circle_path, 80, 100, 3, rand_range=[255, 256], dark_cut_off=200, x_size=x_size, y_size=y_size)
         adjustments = [np.array(a)
                        for adj in adjustments
                        for a in adj]
-        adjustments.append(np.array([255 for _ in range(900)]))
+        adjustments.append(np.array([255 for _ in range(x_size*y_size)]))
         if args.shuffle_samples:
             random.shuffle(adjustments)
         with open(u'sample_data/eval_90_under_100.pkl', 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
 
-        half_right = np.array(Image.open('images/eval_circle_right_half.jpg').convert(u'L')).reshape(900)
-        with open(u'sample_data/eval_half_right.pkl', 'wb') as circle_output:
-            pickle.dump([half_right], circle_output)
+        # half_right = np.array(Image.open('images/eval_circle_right_half.jpg').convert(u'L')).reshape(x_size * y_size)
+        # with open(u'sample_data/eval_half_right.pkl', 'wb') as circle_output:
+        #     pickle.dump([half_right], circle_output)
 
-        crops = crop_sliding_window(u'images/qr_codes_small.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'images/qr_codes_small.jpg', y_size, x_size, printing=False)
         qr_codes = []
         for c in crops:
             as_array = np.asarray(c.cr.convert(u'L'))
@@ -295,7 +322,7 @@ if __name__ == '__main__':
         with open(u'sample_data/qr_codes_small.pkl', 'wb') as circle_output:
             pickle.dump(qr_codes, circle_output)
 
-        crops = crop_sliding_window(u'images/numbered_list_cropped.jpg', 30, 30, printing=False)
+        crops = crop_sliding_window(u'images/numbered_list_cropped_2.jpg', y_size, x_size, printing=False)
         qr_codes = []
         for c in crops:
             as_array = np.asarray(c.cr.convert(u'L'))
@@ -309,8 +336,8 @@ if __name__ == '__main__':
         #     c = next(crops)
         #     as_array = np.asarray(c.convert(u'L'))
         #     ipsums.append(as_array.reshape(as_array.size))
-        crops = crop_sliding_window(u'sample_data/thesis_lorem_ipsum_9.jpg', 30, 30, printing=False)
-        for _ in range(2000):
+        crops = crop_sliding_window(u'sample_data/thesis_lorem_ipsum_9.jpg', y_size, x_size, printing=False)
+        for _ in range(1000):
             try:
                 c = next(crops)
                 for degrees in range(0, 180, 90):
@@ -322,8 +349,8 @@ if __name__ == '__main__':
                     ipsums.append(as_array)
             except StopIteration:
                 break
-        crops = crop_sliding_window(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', 30, 30, printing=False)
-        for _ in range(2000):
+        crops = crop_sliding_window(u'sample_data/thesis_lorem_ipsum_9_1_5_line.jpg', y_size, x_size, printing=False)
+        for _ in range(1000):
             try:
                 c = next(crops)
                 for degrees in range(0, 180, 90):
@@ -335,8 +362,8 @@ if __name__ == '__main__':
                     ipsums.append(as_array)
             except StopIteration:
                 break
-        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_9_2_line_cropped.jpg', 30, 30, printing=False)
-        for _ in range(2000):
+        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_9_2_line_cropped.jpg', y_size, x_size, printing=False)
+        for _ in range(1000):
             try:
                 c = next(crops)
                 for degrees in range(0, 180, 90):
@@ -348,8 +375,8 @@ if __name__ == '__main__':
                     ipsums.append(as_array)
             except StopIteration:
                 break
-        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_7_2_line.jpg', 30, 30, printing=False)
-        for _ in range(2000):
+        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_7_2_line.jpg', y_size, x_size, printing=False)
+        for _ in range(1000):
             try:
                 c = next(crops)
                 for degrees in range(0, 180, 90):
@@ -361,8 +388,8 @@ if __name__ == '__main__':
                     ipsums.append(as_array)
             except StopIteration:
                 break
-        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_7.5_2_line.jpg', 30, 30, printing=False)
-        for _ in range(2000):
+        crops = crop_sliding_window(u'images/thesis_lorem_ipsum_7.5_2_line.jpg', y_size, x_size, printing=False)
+        for _ in range(1000):
             try:
                 c = next(crops)
                 for degrees in range(0, 180, 90):
@@ -386,6 +413,6 @@ if __name__ == '__main__':
             pickle.dump(ipsums, circle_output)
     if not args.default_good and not args.default_bad and not args.default_ipsum:
         output_samples = adjust_from_circle(args.circle_file_path, args.random_threshold, args.rand_range, args.num_samples,
-                                     args.dark_cut_off)
+                                     args.dark_cut_off, x_size=x_size, y_size=y_size)
         with open(args.output_file_path, 'wb') as circle_output:
             pickle.dump(list(output_samples), circle_output)
