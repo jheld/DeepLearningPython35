@@ -16,7 +16,7 @@ In test.py there are examples of networks configurations with proper comments. I
 ## Bubble classification specifics
 Please run the following command to setup the samples for the network to be built against:
 
-```python generate_samples.py --default_good=1 --default_bad=1 --default_ipsum=1 --default_good_permutations=0 --shuffle_samples=1 --x_size=23 --y_size=23```
+```python generate_samples.py --default_good=1 --default_bad=1 --default_ipsum=1 --default_good_permutations=1 --shuffle_samples=1 --x_size=23 --y_size=23```
 
 Please run the following command to compile the samples to the correct format:
 
