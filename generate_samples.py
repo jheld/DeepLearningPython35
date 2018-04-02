@@ -304,6 +304,7 @@ if __name__ == '__main__':
         adjustments.append(np.array([255 for _ in range(x_size*y_size)]))
         if args.shuffle_samples:
             random.shuffle(adjustments)
+        print('Number of white-space/light: {}'.format(len(adjustments)))
         with open(u'sample_data/eval_90_under_100.pkl', 'wb') as circle_output:
             pickle.dump(adjustments, circle_output)
 
@@ -321,12 +322,13 @@ if __name__ == '__main__':
             pickle.dump(qr_codes, circle_output)
 
         crops = crop_sliding_window(u'images/numbered_list_cropped_2.jpg', y_size, x_size, printing=False)
-        qr_codes = []
+        numbers = []
         for c in crops:
             as_array = np.asarray(c.cr.convert(u'L'))
-            qr_codes.append(as_array)
+            numbers.append(as_array)
+        print('Number of numbers: {}'.format(len(numbers)))
         with open(u'sample_data/numbered_list_cropped.pkl', 'wb') as circle_output:
-            pickle.dump(qr_codes, circle_output)
+            pickle.dump(numbers, circle_output)
     if default_ipsum:
         # crops = crop(u'sample_data/thesis_lorem_ipsum.jpg', 30, 30, printing=False)
         ipsums = []
