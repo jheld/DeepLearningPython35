@@ -243,8 +243,7 @@ if __name__ == '__main__':
             num_samples = 35
             if enable_scaling:
                 num_samples = 62
-            # input_file = '/home/jason/box/from copy/Downloads/swami/eval/s18-cs411-1_only.jpg'
-            input_file = '/home/jason/box/From_BrotherDevice/20160102123552_001.jpg'
+            input_file = 'images/20160102123552_001.jpg'
             # input_file = u'images/thesis_circles.jpg'
             # permutation_bounds = dict(start_x = 79, end_x = 93, start_y = 57, end_y = 70)
             permutation_bounds = dict(start_x = 117, end_x = 124, start_y = 80, end_y = 88)
@@ -270,8 +269,7 @@ if __name__ == '__main__':
 
             adjustments = all_adjustments
         else:
-            # one_circle_path = 'images/eval_circle.jpg'
-            one_circle_path = '/home/jason/box/From_BrotherDevice/20160102123552_001_single.jpg'
+            one_circle_path = 'images/20160102123552_001_single.jpg'
             adjustments = generate_threshold_adjustments(one_circle_path, 1, 20, 1, rand_range=[230, 256], dark_cut_off=200, rotations=[], x_size=x_size, y_size=y_size)
             adjustments = [np.array(a)
                            for adj in adjustments
@@ -295,8 +293,7 @@ if __name__ == '__main__':
         print(u'finished writing, number: {}'.format(len(adjustments)))
         del adjustments
     if default_bad:
-        one_circle_path = 'images/eval_circle.jpg'
-        one_circle_path = '/home/jason/box/From_BrotherDevice/20160102123552_001_single.jpg'
+        one_circle_path = 'images/20160102123552_001_single.jpg'
         adjustments = generate_threshold_adjustments(one_circle_path, 80, 100, 3, rand_range=[255, 256], dark_cut_off=200, x_size=x_size, y_size=y_size)
         adjustments = [np.array(a)
                        for adj in adjustments
