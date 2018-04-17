@@ -5,6 +5,7 @@ import pickle
 import random
 from collections import namedtuple
 
+import numpy
 import numpy as np
 from PIL import Image, ImageFilter
 
@@ -408,3 +409,8 @@ if __name__ == '__main__':
         print(u'Number ipsums: {}'.format(len(ipsums)))
         with open(u'sample_data/lorem_ipsum_generated.pkl', 'wb') as circle_output:
             pickle.dump(ipsums, circle_output)
+
+
+def back_to_greyscale(data):
+    data = numpy.array([255 - i * 255 for i in data.reshape(data.size)]).reshape(*data.shape)
+    return data
